@@ -15,3 +15,5 @@ const fileSchema = new mongoose.Schema({
   file: { type: Buffer, required: true },
   fileHash: { type: String, required: true, unique: true },
 })
+
+module.exports = { userSchema, fileSchema };

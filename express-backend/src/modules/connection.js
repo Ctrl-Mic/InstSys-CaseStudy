@@ -53,6 +53,8 @@ async function register(userData) {
 
     console.error("Error registering user:", error.message);
     return { status: 500, message: "Internal Server Error" };
+  } finally {
+    await AccountsConnection.close();
   }
 }
 
@@ -81,6 +83,8 @@ async function upload(userFile) {
     }
 
     console.error("Error uploading file:", error.message);
+  } finally {
+    await FileConnection.close();
   }
 
 }

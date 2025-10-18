@@ -65,3 +65,5 @@ async function retrieve_file(id) {
     await client.close();
   }
 }
+
+module.exports = { retrieve_file };
