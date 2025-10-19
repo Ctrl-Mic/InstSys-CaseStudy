@@ -298,4 +298,4 @@ if (require.main === module) {
   processor.run();
 }
 
-module.exports = ExcelProcessor;
+export default ExcelProcessor;

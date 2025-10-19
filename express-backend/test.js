@@ -1,6 +1,6 @@
-const { StudentDatabase, StudentDataExtractor } = require('./utils/main');
-const { retrieve_file } = require('./src/modules/requestFile');
-const { StudentSchema } = require('./src/components/constructor');
+import { StudentDatabase, StudentDataExtractor } from './utils/main.js';
+import retrieve_file from './src/modules/requestFile.js';
+import StudentSchema from './src/components/constructor.js';
 
 async function DataTransfer() {
   try {

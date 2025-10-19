@@ -706,4 +706,4 @@ class StudentDataExtractor {
   }
 }
 
-module.exports = { StudentDatabase, StudentDataExtractor, FieldStatus, MediaDefaults };
+export default { StudentDatabase, StudentDataExtractor, FieldStatus, MediaDefaults };

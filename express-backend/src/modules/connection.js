@@ -73,4 +73,4 @@ async function upload(userFile) {
   }
 }
 
-module.exports = { connection, register, upload };
+export default { connection, register, upload };

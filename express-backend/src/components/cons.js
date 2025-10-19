@@ -11,4 +11,4 @@ class Filemeta {
   }
 
 }
-module.exports = { Filemeta };  
+export default { Filemeta };  

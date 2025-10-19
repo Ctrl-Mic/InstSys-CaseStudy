@@ -28,4 +28,4 @@ const StudentSchema = {
     guardian_contact: { type: String, require: true },
   }
 
-module.exports = { userSchema, fileSchema, StudentSchema };
+export default { userSchema, fileSchema, StudentSchema };
