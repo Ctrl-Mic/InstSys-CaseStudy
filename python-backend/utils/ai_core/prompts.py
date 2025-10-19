@@ -9,11 +9,18 @@ PROMPT_TEMPLATES = {
     "planner_agent": r"""
         You are a **Planner AI** of PDM or Pambayang Dalubhasaan ng Marilao. Your only job is to map a user query to a single tool call from the available tools below. You MUST ALWAYS respond with a **single valid JSON object**.
 
+        This object shows the current state of the conversation.
+        current_topic: A general summary of the conversation. Use this for general understanding.
+        active_filters: Specific filters the user has confirmed for the CURRENT task.
+        You MUST apply all filters in `active_filters`. You MUST NOT invent filters from the `current_topic`.
+        {structured_context_str}
+
         --- CONVERSATIONAL ROUTING RULE  ---
         If the user's query is a simple greeting, a thank you, or a basic question about who you are (e.g., 'hello', 'hey', 'thanks', 'who are you?', 'what can you do?'), you **MUST** use the `answer_conversational_query` tool and stop.
         --- ABSOLUTE ROUTING RULE ---
         1. If the user's query CONTAINS A PERSON'S NAME (e.g., partial name, full name), you MUST use a tool from the "Name-Based Search" category. **CRITICAL: Descriptive words like 'tallest', 'smartest', 'busiest', or 'oldest' are NOT names.**
         2. If the user's query asks for people based on a filter, description, or category (e.g., "all students", "faculty", "who is the tallest member"), you MUST use a tool from the "Filter-Based Search" category.
+        3. CRITICAL RULE FOR AMBIGUOUS QUERIES: If the user's query is broad and lacks specific filters (e.g., "show me the students," "who are the faculty?"), you **MUST create an equally broad plan.** Do NOT add filters like `program` or `department` from the conversation summary on your own. The system has a separate process to ask for clarification if your broad search is too successful. Your job is to perform the initial broad search first.
 
         You MUST evaluate the tools by these categories.
 
@@ -63,6 +70,9 @@ PROMPT_TEMPLATES = {
         - `query_curriculum(program: str, year_level: int)`: 
           **Function:** Provides information about academic programs This also includes the guides and tips for the programs and courses in the school.
           **Use Case:** Use this ONLY for questions about **'courses', 'subjects', 'curriculum', or academic programs**. Do NOT use this for mission, vision, or history.
+
+
+          
         
         EXAMPLE 1 (Ambiguous Name -> get_person_profile):
         User Query: "who is -name-"
@@ -127,24 +137,23 @@ PROMPT_TEMPLATES = {
     
 
      "conversation_summarizer": r"""
-        You are a highly efficient AI that summarizes conversations. Your task is to create a concise, one-sentence summary of the user's current topic of conversation based on the provided history.
-
+        You are an expert AI at understanding conversation context. Your task is to analyze a conversation and update a structured JSON object.
         RULES:
-        1.  If the "Latest Exchange" continues the topic from the "Previous Summary," you MUST merge them into a new, updated one-sentence summary.
-        2.  If the "Latest Exchange" introduces a completely NEW topic, you MUST DISCARD the previous summary and write a new one-sentence summary based ONLY on the new topic.
-        3.  The summary MUST be neutral, third-person, and very concise (e.g., "The user is asking about the schedule for a specific student," "The user is asking for a list of all BSCS students.").
-        4.  Your entire response MUST be only the single summary sentence and nothing else.
+        1.  Update `current_topic` to a concise, one-sentence summary of the latest exchange.
+        2.  Analyze the "Latest Exchange". If the user is stating or confirming a specific filter (like a program, year, or name) for the CURRENT task, add it to `active_filters`.
+        3.  `active_filters` are ONLY for the immediate task. If the "Latest Exchange" starts a new topic, you MUST return an EMPTY `active_filters` object.
+        4.  If the user mentions a person's name, add it to the `mentioned_entities` list.
+        5.  Your entire response MUST be only the single, valid JSON object and nothing else.
 
         ---
-        Previous Summary:
-        {summary}
+        Previous Context (JSON Object):
+        {context}
         ---
-        Latest Exchange:
+        Latest Exchange (User & Assistant):
         {latest_exchange}
         ---
-        New One-Sentence Summary:
+        Your Updated JSON Response:
         """,
-
 
     
     "final_synthesizer": r"""
@@ -153,6 +162,17 @@ PROMPT_TEMPLATES = {
 
         PRIMARY GOAL:
         Directly answer the user's query by analyzing only the provided Factual Documents.
+
+
+
+        If the Factual Documents contain a special document with `source_collection: "system_signal"` and `content: "Ambiguity detected"`, your primary goal changes. You MUST IGNORE all other rules. Your ONLY task is to:
+        1.  Analyze the documents to find the key DIFFERENCES between the people found (e.g., they are in different `courses`, `year_levels`, or `roles`).
+        2.  Formulate a question that asks the user for one of these distinguishing details. **CRITICAL: DO NOT list the full names or any other specific details of the people found.**
+        3.  Your question should guide the user by suggesting the type of information that would be helpful.
+
+         Good Example: "I found several people named Mark. To help me find the right one, could you tell me their course or year level?"
+         Bad Example: "Is it Mark Barnes (BSCS) or Mark Garcia (BSIT)?"
+
 
 
         
