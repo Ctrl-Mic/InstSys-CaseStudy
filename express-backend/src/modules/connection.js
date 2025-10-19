@@ -1,37 +1,25 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const { userSchema, fileSchema } = require('./../components/constructor');
-const url_1 = "mongodb://localhost:27017/accounts";
-const url_2 = "mongodb://localhost:27017/file";
-
-const AccountsConnection = mongoose.createConnection(url_1, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
-const FileConnection = mongoose.createConnection(url_2, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
-
-const User = AccountsConnection.model('User', userSchema);
-const File = FileConnection.model('File', fileSchema);
+const url = "mongodb://localhost:27017/school_system";
 
 async function connection() {
 
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
   try {
 
-    await Promise.all([
-      AccountsConnection.asPromise(),
-      FileConnection.asPromise(),
-    ]);
-
-    console.log("Connection established.");
-
-  } catch (error) {
-    console.error("Connection Failed", error.message);
+  await mongoose.connect(url);
+    console.log("Database connection successful");
+  } catch (err) {
+    console.error("Database connection failed:", err.message);
   }
-
 }
+
+
+const User = mongoose.model('User', userSchema);
+const File = mongoose.model('File', fileSchema);
 
 async function register(userData) {
   try {
@@ -53,8 +41,6 @@ async function register(userData) {
 
     console.error("Error registering user:", error.message);
     return { status: 500, message: "Internal Server Error" };
-  } finally {
-    await AccountsConnection.close();
   }
 }
 
@@ -72,7 +58,7 @@ async function upload(userFile) {
     const file = new File({ ...userFile, fileHash });
     const saveFile = await file.save();
     console.log("File uploaded successfully.");
-
+    console.log(saveFile);
     return saveFile;
 
   } catch (error) {
@@ -83,10 +69,8 @@ async function upload(userFile) {
     }
 
     console.error("Error uploading file:", error.message);
-  } finally {
-    await FileConnection.close();
+    return { status: 500, message: "Internal server error" };
   }
-
 }
 
 module.exports = { connection, register, upload };
