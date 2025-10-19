@@ -1,11 +1,37 @@
+import loginRoute from "./routes/login.js";
+import guestRoute from "./routes/guestRoute.js";
+import {register, upload} from "./src/modules/connection";
+import cons from ('./src/components/cons');
+
 const express = require('express');
-const axios = require('axois');
-const f = require('fs');
-const path = require('path')
+const axios = require('axios');
+const cors = require('cors');
 const { callPythonAPI, configPythonAPI } = require('./API/PythonAPI')
-const { register, upload } = require('./src/modules/connection');
-const { cons } = require('./src/components/cons');
 const app = express();
+
+console.log("server is starting...");
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+app.use(cors({
+  origin: 'http://localhost:5173', // allow your Vite frontend
+  credentials: true
+}));
+
+app.use(express.json());
+
+// ✅ Health check route for frontend
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Express server is running' });
+  console.log("Health check endpoint was called.");
+});
+
+app.use("/", loginRoute);
+app.use("/", guestRoute);
+
 
 app.get('/v1/chat/prompt', async (req, res) => {
   try {
