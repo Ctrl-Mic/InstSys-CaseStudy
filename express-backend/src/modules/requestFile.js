@@ -1,13 +1,11 @@
-const { MongoClient ,ObjectId } = require('mongodb');
-const pdf = require('pdf-parse');
+const { MongoClient, ObjectId } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
+let pdfParse = require('pdf-parse');
+pdfParse = pdfParse.default || pdfParse;
 
 const url = 'mongodb://localhost:27017/';
-const client = new MongoClient(url, {
-  useUnifiedTopology: true,
-  useNewUrlParser: true
-});
+const client = new MongoClient(url);
 
 async function xlsxFormat(fileBuffer) {
 
@@ -28,42 +26,68 @@ async function pdfFormat(buffer) {
 
   try {
 
-    return await pdf(buffer);
+    return await pdfParse(buffer);
 
   } catch (error) {
     console.log('Error converting pdf', error.message);
   }
 }
 
-async function retrieve_file(id) {
+async function retrieve_file() {
   try {
-
     await client.connect();
 
-    const database = client.db('file');
+    const database = client.db('school_system');
     const collection = database.collection('files');
 
-    const fileDocument = await collection.findOne({ _id: new ObjectId(id)});
-    const fileBuffer = fileDocument.file.buffer;
+    const fileDocuments = await collection.find().toArray();
 
-    if (
-      fileDocument.file_name.endsWith('.xlsx') ||
-      fileDocument.fileType.includes('spreadsheet')
-    ) {
-      const xlsxData = await xlsxFormat(fileBuffer);
-    } else if (fileDocument.fileType === 'application/pdf') {
-      const pdfData = await pdfFormat(fileBuffer);
-    } else {
-      console.log('Unsupported file type:', fileDocument.fileType);
+    if (!fileDocuments.length) {
+      console.log('❌ No files found in MongoDB');
+      return [];
     }
 
-    fs.writeFileSync(fileDocument.file_name, fileBuffer);
+    
+
+    const results = [];
+
+    for (const doc of fileDocuments) {
+      const fileBuffer = Buffer.from(doc.file.buffer);
+      if (!fileBuffer) {
+        console.log(` Skipping ${doc._id}: Missing buffer`);
+        continue;
+      }
+      
+      let parsedData = null;
+
+      if (
+        doc.file_name?.endsWith('.xlsx') ||
+        doc.fileType?.includes('spreadsheet')
+      ) {
+        parsedData = await xlsxFormat(fileBuffer);
+      } else if (doc.fileType === 'application/pdf') {
+        const pdfData = await pdfFormat(fileBuffer);
+        parsedData = pdfData.text;
+      } else {
+        console.log(` Unsupported file type: ${doc.fileType}`);
+        continue;
+      }
+
+      results.push({
+        _id: doc._id,
+        file_name: doc.file_name,
+        fileType: doc.fileType,
+        text: parsedData,
+      });
+    }
+
+    return results;
 
   } catch (error) {
-    console.log('Error retrieving file:',error.message);
+    console.log('Error retrieving file:', error.message);
   } finally {
     await client.close();
   }
 }
 
-module.exports = { retrieve_file };
+export default retrieve_file;

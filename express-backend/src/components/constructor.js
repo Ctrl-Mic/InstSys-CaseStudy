@@ -16,4 +16,16 @@ const fileSchema = new mongoose.Schema({
   fileHash: { type: String, required: true, unique: true },
 })
 
-module.exports = { userSchema, fileSchema };
+const StudentSchema = {
+    student_id: { type: String, require: true },
+    surname: { type: String, require: true },
+    first_name: { type: String, require: true },
+    course: { type: String, require: true },
+    section: { type: String, require: true },
+    year: { type: String, require: true },
+    contact_number: { type: String, require: true },
+    guardian_name: { type: String, require: true },
+    guardian_contact: { type: String, require: true },
+  }
+
+module.exports = { userSchema, fileSchema, StudentSchema };
