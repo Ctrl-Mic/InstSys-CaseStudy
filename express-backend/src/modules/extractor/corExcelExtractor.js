@@ -1,72 +1,47 @@
-// cor_excel_extractor.js
 import * as xlsx from 'xlsx';
 import path from 'path';
-import { __courseNameMap } from  './'
+import { __courseNameMap, __knownCourses, __subject, programMap, courseDepartmentMap} from './../../components/mapper.js';
+import { __defaultText, __text, metadataSchema} from '../../components/constructor.js';
+import { logMessage } from './../../utils/console.js';
 
  class CORExcelExtractor {
-  constructor() {
-    // Department mapping
-    this.knownCourses = {
-      'CCS': ['BSCS', 'BSIT'],
-      'CHTM': ['BSHM', 'BSTM'],
-      'CBA': ['BSBA', 'BSOA'],
-      'CTE': ['BECED', 'BTLE'],
-      'COE': ['BSEE', 'BSCE', 'BSME'],
-      'CON': ['BSN'],
-      'CAS': ['AB', 'BS']
-    };
+  constructor(log = false) {
+
+    this.knownCourses = __knownCourses;
+    this.log = log;
   }
 
-  /**
-   * Main extraction method - Universal COR extraction
-   */
   async extractCORExcelInfoSmart(filename) {
     try {
-      // Read the entire Excel file without headers
+      
       const workbook = xlsx.readFile(filename);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      
-      // Convert to 2D array (no header row)
-      const data = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-      
-      console.log(`📋 COR Excel dimensions: ${data.length} rows x ${data[0]?.length || 0} cols`);
-      
-      // Universal extraction - scan entire sheet
+      const data = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: '' });      
       const corInfo = this.extractCORUniversalScan(data, filename);
       
       if (corInfo && corInfo.program_info.Program) {
-        console.log('✅ Universal COR extraction successful');
+        logMessage('✅ Universal COR extraction successful', this.log);
         return corInfo;
       }
       
-      console.log('❌ Could not extract COR data from any format');
+      logMessage('Could not extract COR data from any format', this.log);
       return null;
       
     } catch (error) {
-      console.error(`❌ Error in universal COR extraction: ${error.message}`);
+      console.error(`Error in universal COR extraction: ${error.message}`);
       return null;
     }
   }
 
-  /**
-   * Universal scanner that finds COR data regardless of format
-   */
   extractCORUniversalScan(data, filename) {
     try {
       let programInfo = { Program: '', 'Year Level': '', Section: '', Adviser: '' };
       let scheduleData = [];
       let totalUnits = null;
       
-      // STEP 1: Universal Program Info Extraction
       programInfo = this.scanForProgramInfo(data, filename);
-      console.log('📋 Extracted Program Info:', programInfo);
-      
-      // STEP 2: Universal Schedule Extraction
       scheduleData = this.scanForScheduleData(data);
-      console.log(`📋 Found ${scheduleData.length} subjects`);
-      
-      // STEP 3: Universal Total Units Extraction
       totalUnits = this.scanForTotalUnits(data);
       console.log(`📋 Total Units: ${totalUnits}`);
       
@@ -82,15 +57,9 @@ import { __courseNameMap } from  './'
     }
   }
 
-  /**
-   * Scan entire sheet for program information
-   */
   scanForProgramInfo(data, filename) {
     const programInfo = { Program: '', 'Year Level': '', Section: '', Adviser: '' };
     
-    console.log('\n🔍 Scanning COR Excel for program info...');
-    
-    // Scan every cell in the sheet (first 30 rows, 15 columns)
     const maxRows = Math.min(data.length, 30);
     const maxCols = 15;
     
@@ -102,63 +71,53 @@ import { __courseNameMap } from  './'
         
         const cellUpper = cellValue.toUpperCase();
         
-        // Check if this cell is a label (contains colon or equals)
-        const isLabel = cellUpper.includes(':') || cellUpper.includes('=');
-        
-        // PROGRAM detection
         if (!programInfo.Program && (cellUpper.includes('PROGRAM') || cellUpper.includes('COURSE'))) {
-          console.log(`   Found label at (${i},${j}): "${cellValue}"`);
+          logMessage(`   Found label at (${i},${j}): "${cellValue}"`, this.log);
           
-          // Try to get value from same cell (after colon)1
           const match = cellValue.match(/(?:PROGRAM|COURSE)\s*[:=]?\s*(.+)/i);
           if (match && match[1].trim()) {
             const value = match[1].trim();
             const cleaned = this.cleanProgramInfoValue(value, 'Program');
             if (cleaned) {
               programInfo.Program = cleaned;
-              console.log(`   ✅ Found Program (same cell): ${cleaned}`);
+              logMessage(`   ✅ Found Program (same cell): ${cleaned}`, this.log);
               continue;
             }
           }
           
-          // Try next cell (right)
           if (j + 1 < row.length) {
             const nextValue = String(row[j + 1] || '').trim();
             if (nextValue) {
               const cleaned = this.cleanProgramInfoValue(nextValue, 'Program');
               if (cleaned) {
                 programInfo.Program = cleaned;
-                console.log(`   ✅ Found Program (right cell): ${cleaned} at (${i},${j + 1})`);
+                logMessage(`   ✅ Found Program (right cell): ${cleaned} at (${i},${j + 1})`, this.log);
                 continue;
               }
             }
           }
           
-          // Try cell below
           if (i + 1 < data.length && j < data[i + 1].length) {
             const belowValue = String(data[i + 1][j] || '').trim();
             if (belowValue) {
               const cleaned = this.cleanProgramInfoValue(belowValue, 'Program');
               if (cleaned) {
                 programInfo.Program = cleaned;
-                console.log(`   ✅ Found Program (below): ${cleaned} at (${i + 1},${j})`);
+                logMessage(`   ✅ Found Program (below): ${cleaned} at (${i + 1},${j})`, this.log);
                 continue;
               }
             }
           }
         }
         
-        // YEAR LEVEL detection
         if (!programInfo['Year Level'] && (cellUpper.includes('YEAR') || cellUpper.includes('LEVEL'))) {
-          console.log(`   Found label at (${i},${j}): "${cellValue}"`);
           
-          // Try same cell
           const match = cellValue.match(/(?:YEAR|LEVEL)\s*[:=]?\s*(.+)/i);
           if (match && match[1].trim()) {
             const cleaned = this.cleanProgramInfoValue(match[1].trim(), 'Year Level');
             if (cleaned) {
               programInfo['Year Level'] = cleaned;
-              console.log(`   ✅ Found Year Level: ${cleaned}`);
+              logMessage(`   ✅ Found Year Level: ${cleaned}`, this.log);
               continue;
             }
           }
@@ -169,7 +128,7 @@ import { __courseNameMap } from  './'
             const cleaned = this.cleanProgramInfoValue(nextValue, 'Year Level');
             if (cleaned) {
               programInfo['Year Level'] = cleaned;
-              console.log(`   ✅ Found Year Level: ${cleaned}`);
+              logMessage(`   ✅ Found Year Level: ${cleaned}`, this.log);
               continue;
             }
           }
@@ -177,7 +136,7 @@ import { __courseNameMap } from  './'
         
         // SECTION detection
         if (!programInfo.Section && (cellUpper.includes('SECTION') || cellUpper.includes('SEC'))) {
-          console.log(`   Found label at (${i},${j}): "${cellValue}"`);
+          logMessage(`   Found label at (${i},${j}): "${cellValue}"`, this.log);
           
           // Try same cell
           const match = cellValue.match(/(?:SECTION|SEC)\s*[:=]?\s*(.+)/i);
@@ -185,7 +144,7 @@ import { __courseNameMap } from  './'
             const cleaned = this.cleanProgramInfoValue(match[1].trim(), 'Section');
             if (cleaned) {
               programInfo.Section = cleaned;
-              console.log(`   ✅ Found Section: ${cleaned}`);
+              logMessage(`   ✅ Found Section: ${cleaned}`, this.log);
               continue;
             }
           }
@@ -196,23 +155,22 @@ import { __courseNameMap } from  './'
             const cleaned = this.cleanProgramInfoValue(nextValue, 'Section');
             if (cleaned) {
               programInfo.Section = cleaned;
-              console.log(`   ✅ Found Section: ${cleaned}`);
+              logMessage(`   ✅ Found Section: ${cleaned}`, this.log);
               continue;
             }
           }
         }
         
         // ADVISER detection
-        if (!programInfo.Adviser && (cellUpper.includes('ADVISER') || cellUpper.includes('ADVISOR') || cellUpper.includes('INSTRUCTOR'))) {
-          console.log(`   Found label at (${i},${j}): "${cellValue}"`);
-          
+        if (!programInfo.Adviser && (cellUpper.includes('ADVISER') || cellUpper.includes('ADVISOR') || cellUpper.includes('INSTRUCTOR'))) {          
           // Try same cell
+
           const match = cellValue.match(/(?:ADVISER|ADVISOR|INSTRUCTOR)\s*[:=]?\s*(.+)/i);
           if (match && match[1].trim()) {
             const cleaned = this.cleanProgramInfoValue(match[1].trim(), 'Adviser');
             if (cleaned) {
               programInfo.Adviser = cleaned;
-              console.log(`   ✅ Found Adviser: ${cleaned}`);
+              logMessage(`   ✅ Found Adviser: ${cleaned}`, this.log);
               continue;
             }
           }
@@ -222,27 +180,20 @@ import { __courseNameMap } from  './'
             const nextValue = String(row[j + 1] || '').trim();
             if (nextValue && nextValue.length > 5) { // Likely a name
               programInfo.Adviser = nextValue;
-              console.log(`   ✅ Found Adviser: ${nextValue}`);
+              logMessage(`   ✅ Found Adviser: ${nextValue}`,);
               continue;
             }
           }
         }
       }
     }
-    
-    // Debug: Print first few rows
-    console.log('\n📋 First 3 rows (for debugging):');
-    for (let i = 0; i < Math.min(3, data.length); i++) {
-      console.log(`Row ${i}:`, data[i].slice(0, 8));
-    }
-    
+        
     // Fallback: Extract from filename if still missing critical info
     if (!programInfo.Program) {
-      console.log('\n⚠️  Program not found in Excel, checking filename...');
       const filenameCourse = this.extractCourseFromFilename(filename);
       if (filenameCourse) {
         programInfo.Program = filenameCourse;
-        console.log(`   ✅ Found Program from filename: ${filenameCourse}`);
+        logMessage(`   ✅ Found Program from filename: ${filenameCourse}`, this.log);
       }
     }
     
@@ -250,7 +201,7 @@ import { __courseNameMap } from  './'
       const yearFromFilename = this.extractYearFromFilename(filename);
       if (yearFromFilename) {
         programInfo['Year Level'] = yearFromFilename;
-        console.log(`   ✅ Found Year from filename: ${yearFromFilename}`);
+        logMessage(`   ✅ Found Year from filename: ${yearFromFilename}`, this.log);
       }
     }
     
@@ -258,18 +209,15 @@ import { __courseNameMap } from  './'
       const sectionFromFilename = this.extractSectionFromFilename(filename);
       if (sectionFromFilename) {
         programInfo.Section = sectionFromFilename;
-        console.log(`   ✅ Found Section from filename: ${sectionFromFilename}`);
+        logMessage(`   ✅ Found Section from filename: ${sectionFromFilename}`, this.log);
       }
     }
-    
-    console.log('\n📊 Final Program Info:', programInfo);
-    
+        
     return programInfo;
   }
 
-  /**
-   * Clean and validate program info values
-   */
+  //Clean and validate program info values
+  
   cleanProgramInfoValue(value, field) {
   if (!value) return null;
   
@@ -282,14 +230,13 @@ import { __courseNameMap } from  './'
   
   if (field === 'Program') {
     // Map full course names to codes (NEW!)
-    const courseNameMap = 
-    
+    const courseNameMap = __courseNameMap
     const valueUpper = value.toUpperCase();
     
     // Check if it's a full name that can be mapped
     for (const [fullName, code] of Object.entries(courseNameMap)) {
       if (valueUpper.includes(fullName)) {
-        console.log(`   🔄 Converted "${value}" to "${code}"`);
+        logMessage(`   🔄 Converted "${value}" to "${code}"`, this.log);
         return code;
       }
     }
@@ -300,7 +247,6 @@ import { __courseNameMap } from  './'
       return match[1].toUpperCase();
     }
     
-    // Return as-is if no pattern matched (will be used for department detection)
     return value;
     
   } else if (field === 'Year Level') {
@@ -319,9 +265,7 @@ import { __courseNameMap } from  './'
   return value;
 }
 
-    /**
-     * Convert Excel decimal time to readable format
-     */
+    //Convert Excel decimal time to readable format
     convertExcelTimeToReadable(excelTime) {
     if (!excelTime || excelTime === '') return 'N/A';
     
@@ -349,12 +293,9 @@ import { __courseNameMap } from  './'
 
 
 
-  /**
-   * Extract course from filename
-   */
+  //Extract course from filename
   extractCourseFromFilename(filename) {
     const basename = path.basename(filename, path.extname(filename)).toUpperCase();
-    console.log(`   Analyzing filename: ${basename}`);
     
     // Try multiple patterns
     const patterns = [
@@ -366,7 +307,7 @@ import { __courseNameMap } from  './'
     for (const pattern of patterns) {
       const match = basename.match(pattern);
       if (match) {
-        console.log(`   Matched: ${match[1]}`);
+        logMessage(`   Matched: ${match[1]}`,this.log);
         return match[1];
       }
     }
@@ -374,31 +315,26 @@ import { __courseNameMap } from  './'
     return null;
   }
 
-  /**
-   * Extract year from filename
-   */
+  //Extract year from filename
   extractYearFromFilename(filename) {
     const basename = path.basename(filename, path.extname(filename));
     const match = basename.match(/(\d)(?:YR|YEAR|Y)/i);
     return match ? match[1] : null;
   }
 
-  /**
-   * Extract section from filename
-   */
+  //Extract section from filename
+
   extractSectionFromFilename(filename) {
     const basename = path.basename(filename, path.extname(filename));
     const match = basename.match(/SEC([A-Z])|_([A-Z])_/i);
     return match ? (match[1] || match[2]).toUpperCase() : null;
   }
 
-  /**
-   * Universal schedule data extraction
-   */
+  //Universal schedule data extraction
+
   scanForScheduleData(data) {
+
     const scheduleData = [];
-    
-    // Find potential schedule headers
     const headerKeywords = ['SUBJECT', 'CODE', 'DESCRIPTION', 'UNITS', 'DAY', 'TIME', 'ROOM'];
     let scheduleStartRow = -1;
     
@@ -410,7 +346,7 @@ import { __courseNameMap } from  './'
       
       if (keywordCount >= 3) {
         scheduleStartRow = i + 1;
-        console.log(`   Found schedule header at row ${i}, data starts at ${scheduleStartRow}`);
+        logMessage(`   Found schedule header at row ${i}, data starts at ${scheduleStartRow}`, this.log);
         break;
       }
     }
@@ -421,7 +357,7 @@ import { __courseNameMap } from  './'
         const firstCell = String(data[i]?.[0] || '').trim();
         if (/^[A-Z]{2,4}\s*\d{3}[A-Z]?$/i.test(firstCell)) {
           scheduleStartRow = i;
-          console.log(`   Found schedule data starting at row ${i} (subject code pattern)`);
+          logMessage(`   Found schedule data starting at row ${i} (subject code pattern)`, this.log);
           break;
         }
       }
@@ -434,9 +370,7 @@ import { __courseNameMap } from  './'
     return scheduleData;
   }
 
-  /**
- * Flexible schedule extraction
- */
+  //Flexible schedule extraction
 extractScheduleFlexible(data, startRow) {
   const schedule = [];
   
@@ -452,16 +386,7 @@ extractScheduleFlexible(data, startRow) {
     // Check if this looks like a subject code
     if (!/^[A-Z]{2,4}\s*\d{2,4}[A-Z]?$/i.test(firstCell)) continue;
     
-    const subject = {
-      'Subject Code': firstCell,
-      'Description': String(row[1] || '').trim(),
-      'Type': String(row[2] || '').trim(),
-      'Units': String(row[3] || '').trim(),
-      'Day': String(row[4] || '').trim(),
-      'Time Start': this.convertExcelTimeToReadable(row[5]),  
-      'Time End': this.convertExcelTimeToReadable(row[6]),    
-      'Room': String(row[7] || '').trim()
-    };
+    const subject = __subject;
     
     schedule.push(subject);
   }
@@ -469,9 +394,8 @@ extractScheduleFlexible(data, startRow) {
   return schedule;
 }
 
-  /**
-   * Find total units anywhere in the sheet
-   */
+  //Find total units anywhere in the sheet
+
   scanForTotalUnits(data) {
     for (let i = 0; i < data.length; i++) {
       const row = data[i] || [];
@@ -499,33 +423,14 @@ extractScheduleFlexible(data, startRow) {
     return null;
   }
 
-  /**
-   * Format COR info for display/storage
-   */
+  //Format COR info for display/storage
+
   formatCORInfoEnhanced(corInfo) {
-    let text = `COR (Certificate of Registration) - Class Schedule
-
-PROGRAM INFORMATION:
-Program: ${corInfo.program_info.Program}
-Year Level: ${corInfo.program_info['Year Level']}
-Section: ${corInfo.program_info.Section}
-Adviser: ${corInfo.program_info.Adviser}
-Total Units: ${corInfo.total_units || 'N/A'}
-
-ENROLLED SUBJECTS (${corInfo.schedule.length} subjects):
-`;
+    let text = __defaultText;
     
     if (corInfo.schedule.length > 0) {
       corInfo.schedule.forEach((course, i) => {
-        text += `
-Subject ${i + 1}:
-- Subject Code: ${course['Subject Code'] || 'N/A'}
-- Description: ${course['Description'] || 'N/A'}
-- Type: ${course['Type'] || 'N/A'}
-- Units: ${course['Units'] || 'N/A'}
-- Schedule: ${course['Day'] || 'N/A'} ${course['Time Start'] || 'N/A'}-${course['Time End'] || 'N/A'}
-- Room: ${course['Room'] || 'N/A'}
-`;
+        text += __text
       });
     } else {
       text += '\nNo subjects found in schedule.';
@@ -534,35 +439,16 @@ Subject ${i + 1}:
     return text.trim();
   }
 
-  /**
-   * Detect department from course code
-   */
+  //Detect department from course code
   detectDepartmentFromCourse(courseCode) {
   if (!courseCode) return 'UNKNOWN';
   
   const courseUpper = String(courseCode).toUpperCase().trim();
   
   // Handle full program names FIRST (NEW!)
-  if (courseUpper.includes('COMPUTER SCIENCE')) {
-    return 'CCS';
-  } else if (courseUpper.includes('INFORMATION TECHNOLOGY')) {
-    return 'CCS';
-  } else if (courseUpper.includes('HOSPITALITY MANAGEMENT') || courseUpper.includes('HOSPITALITY')) {
-    return 'CHTM';
-  } else if (courseUpper.includes('TOURISM MANAGEMENT') || courseUpper.includes('TOURISM')) {
-    return 'CHTM';
-  } else if (courseUpper.includes('BUSINESS ADMINISTRATION') || courseUpper.includes('BUSINESS')) {
-    return 'CBA';
-  } else if (courseUpper.includes('OFFICE ADMINISTRATION')) {
-    return 'CBA';
-  } else if (courseUpper.includes('EDUCATION')) {
-    return 'CTE';
-  } else if (courseUpper.includes('ENGINEERING')) {
-    return 'COE';
-  } else if (courseUpper.includes('NURSING')) {
-    return 'CON';
-  } else if (courseUpper.includes('ARTS') && courseUpper.includes('SCIENCES')) {
-    return 'CAS';
+  for (const { Keywords, code, matchAll} in programMap) {
+    const hasMatch = matchAll ? Keywords.every(kw => courseUpper.includes(kw)): Keywords.some(kw => courseUpper.includes(kw));
+    if (hasMatch) return code;
   }
   
   // Check abbreviated codes
@@ -573,65 +459,30 @@ Subject ${i + 1}:
   }
   
   // Additional check for BS/AB prefix patterns (NEW!)
-  if (courseUpper.startsWith('BS HM') || courseUpper.startsWith('BSHM')) {
-    return 'CHTM';
-  } else if (courseUpper.startsWith('BS TM') || courseUpper.startsWith('BSTM')) {
-    return 'CHTM';
-  } else if (courseUpper.startsWith('BS IT') || courseUpper.startsWith('BSIT')) {
-    return 'CCS';
-  } else if (courseUpper.startsWith('BS CS') || courseUpper.startsWith('BSCS')) {
-    return 'CCS';
-  } else if (courseUpper.startsWith('BS BA') || courseUpper.startsWith('BSBA')) {
-    return 'CBA';
-  } else if (courseUpper.startsWith('BS OA') || courseUpper.startsWith('BSOA')) {
-    return 'CBA';
+  const courseUPPER = courses.toUpperCase().trim()
+  for (const entry in courseDepartmentMap) {
+    if ( entry.prefixes.some(prefix => courseUPPER.startsWith(prefix))) {
+      return entry.department;
+    }
   }
   
   return 'UNKNOWN';
 }
 
-  /**
-   * Process COR Excel file and return structured data
-   */
+  //Process COR Excel file and return structured data
   async processCORExcel(filename) {
   try {
     const corInfo = await this.extractCORExcelInfoSmart(filename);
     
     if (!corInfo || !corInfo.program_info.Program) {
-      console.log('❌ Could not extract COR data from Excel');
+      logMessage('❌ Could not extract COR data from Excel', this.log);
       return null;
     }
     
     const formattedText = this.formatCORInfoEnhanced(corInfo);
-    
-    const subjectCodesList = corInfo.schedule
-      .map(course => course['Subject Code'])
-      .filter(code => code);
-    const subjectCodesString = subjectCodesList.join(', ');
-    
-    const metadata = {
-      course: corInfo.program_info.Program,
-      section: corInfo.program_info.Section,
-      year: corInfo.program_info['Year Level'],  // ← CHANGED from year_level
-      adviser: corInfo.program_info.Adviser,
-      data_type: 'cor_schedule',
-      subject_codes: subjectCodesString,
-      total_units: String(corInfo.total_units || ''),
-      subject_count: corInfo.schedule.length,
-      department: this.detectDepartmentFromCourse(corInfo.program_info.Program),
-      created_at: new Date(),
-      source_file: path.basename(filename)
-    };
-    
-    console.log('✅ COR processing complete');
-    console.log(`   📚 Subjects: ${metadata.subject_count}, Total Units: ${metadata.total_units}`);
-    console.log(`   📋 Subject Codes: ${subjectCodesString}`);
-    
-    return {
-      cor_info: corInfo,
-      formatted_text: formattedText,
-      metadata: metadata
-    };
+    const metadata = metadataSchema(corInfo);
+        
+    return { cor_info: corInfo, formatted_text: formattedText, metadata: metadata };
     
   } catch (error) {
     console.error(`❌ Error processing COR Excel: ${error.message}`);

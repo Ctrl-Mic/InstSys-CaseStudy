@@ -404,4 +404,4 @@ Subjects:`;
   }
 }
 
-module.exports = QueryAssistant;
+export default QueryAssistant;

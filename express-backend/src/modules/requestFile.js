@@ -1,8 +1,6 @@
-const { MongoClient, ObjectId } = require('mongodb');
-const XLSX = require('xlsx');
-const fs = require('fs');
-let pdfParse = require('pdf-parse');
-pdfParse = pdfParse.default || pdfParse;
+import { MongoClient, ObjectId } from 'mongodb';
+import XLSX from 'xlsx';
+import PDFParser from "pdf2json";
 
 const url = 'mongodb://localhost:27017/';
 const client = new MongoClient(url);
@@ -23,17 +21,28 @@ async function xlsxFormat(fileBuffer) {
 }
 
 async function pdfFormat(buffer) {
+  return new Promise((resolve, reject) => {
+    const pdfParser = new PDFParser();
 
-  try {
+    pdfParser.on("pdfParser_dataError", errData => {
+      reject(errData.parserError);
+    });
 
-    return await pdfParse(buffer);
-
-  } catch (error) {
-    console.log('Error converting pdf', error.message);
-  }
+    pdfParser.on("pdfParser_dataReady", pdfData => {
+      try {
+        const text = pdfData.Pages.map(page =>
+          page.Texts.map(t => decodeURIComponent(t.R[0].T)).join(" ")
+        ).join("\n");
+        resolve({ text });
+      } catch (err) {
+        reject(err);
+      }
+    });
+    pdfParser.parseBuffer(buffer);
+  });
 }
 
-async function retrieve_file() {
+export async function retrieve_file() {
   try {
     await client.connect();
 
@@ -47,7 +56,7 @@ async function retrieve_file() {
       return [];
     }
 
-    
+
 
     const results = [];
 
@@ -57,7 +66,7 @@ async function retrieve_file() {
         console.log(` Skipping ${doc._id}: Missing buffer`);
         continue;
       }
-      
+
       let parsedData = null;
 
       if (

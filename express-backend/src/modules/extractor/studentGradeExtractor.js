@@ -1,15 +1,14 @@
-// student_grades_extractor.js
 import xlsx from 'xlsx';
 import path from 'path';
+import { validGradeStatuses, gradesIndicators } from './../../components/mapper/js'
+import { logMessage } from '../../utils/console.js';
 
 export class StudentGradesExtractor {
-  constructor() {
-    this.validGradeStatuses = ['PASSED', 'FAILED', 'INCOMPLETE', 'DROPPED', 'WITHDREW', 'INC', 'DRP', 'P', 'F'];
+  constructor(log = false) {
+    this.validGradeStatuses = validGradeStatuses;
+    this.log = log;
   }
 
-  /**
-   * Main extraction method for student grades
-   */
   async extractStudentGradesExcelInfo(filename) {
     try {
       const workbook = xlsx.readFile(filename);
@@ -17,24 +16,19 @@ export class StudentGradesExtractor {
       const worksheet = workbook.Sheets[sheetName];
       const data = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-      console.log(`📋 Student Grades Excel dimensions: ${data.length} rows x ${data[0]?.length || 0} cols`);
+      logMessage(`📋 Student Grades Excel dimensions: ${data.length} rows x ${data[0]?.length || 0} cols`, this.log);
 
-      // Debug: Show first 10 rows
-      console.log('📋 Raw Excel content (first 10 rows):');
+      logMessage('📋 Raw Excel content (first 10 rows):', this.log);
       for (let i = 0; i < Math.min(10, data.length); i++) {
-        const rowData = data[i].slice(0, 8).map(cell => 
-          cell ? `'${cell}'` : "'N/A'"
-        );
-        console.log(`   Row ${i}: [${rowData.join(', ')}]`);
+        const rowData = data[i].slice(0, 8).map(cell => cell ? `'${cell}'` : "'N/A'");
+        logMessage(`   Row ${i}: [${rowData.join(', ')}]`,this.log);
       }
 
-      // STEP 1: Extract student metadata
       const studentInfo = this.extractGradesStudentMetadata(data, filename);
-      console.log('📋 Extracted Student Info:', studentInfo);
+      logMessage(`📋 Extracted Student Info: ${studentInfo}`, this.log);
 
-      // STEP 2: Extract grade records
       const gradesData = this.extractGradesRecords(data);
-      console.log(`📋 Found ${gradesData.length} grade records`);
+      logMessage(`📋 Found ${gradesData.length} grade records`, this.log);
 
       return {
         student_info: studentInfo,
@@ -42,7 +36,7 @@ export class StudentGradesExtractor {
       };
 
     } catch (error) {
-      console.error(`❌ Error in student grades extraction: ${error.message}`);
+      logMessage(`❌ Error in student grades extraction: ${error.message}`, this.log);
       return null;
     }
   }
@@ -62,11 +56,7 @@ export class StudentGradesExtractor {
         }
       }
 
-      const gradesIndicators = [
-        'STUDENT NUMBER', 'STUDENT NAME', 'SUBJECT CODE', 'SUBJECT DESCRIPTION',
-        'UNITS', 'EQUIVALENT', 'GRADE', 'GRADES', 'REMARKS', 'GWA',
-        'ACADEMIC RECORD', 'TRANSCRIPT', 'GRADING', 'FINAL GRADE'
-      ];
+      const gradesIndicators = gradesIndicators;
 
       const facultyIndicators = ['FACULTY', 'PROFESSOR', 'INSTRUCTOR', 'SCHEDULE', 'TIME', 'ROOM'];
       const curriculumIndicators = ['CURRICULUM', 'COURSE CURRICULUM', 'SYLLABUS'];
@@ -77,20 +67,17 @@ export class StudentGradesExtractor {
 
       const isGrades = gradesIndicatorCount >= 4 && !hasFacultyIndicator && !hasCurriculumIndicator;
 
-      console.log(`🔍 Grades indicators: ${gradesIndicatorCount}`);
-      console.log(`🔍 Is student grades: ${isGrades}`);
+      logMessage(`🔍 Grades indicators: ${gradesIndicatorCount}`, this.log);
+      logMessage(`🔍 Is student grades: ${isGrades}`, this.log);
 
       return isGrades;
 
     } catch (error) {
-      console.error(`🔍 Error in grades detection: ${error.message}`);
+      logMessage(`🔍 Error in grades detection: ${error.message}`, this.log);
       return false;
     }
   }
 
-  /**
-   * Extract student metadata from grades file
-   */
   extractGradesStudentMetadata(data, filename) {
     const studentInfo = {
       student_number: '',

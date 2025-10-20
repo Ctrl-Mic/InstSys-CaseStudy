@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
-const crypto = require('crypto');
-const { userSchema, fileSchema } = require('./../components/constructor');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
+import { userSchema, fileSchema } from './../components/constructor.js';
 const url = "mongodb://localhost:27017/school_system";
 
-async function connection() {
+export async function connection() {
 
   if (mongoose.connection.readyState === 1) {
     return;
@@ -21,7 +21,7 @@ async function connection() {
 const User = mongoose.model('User', userSchema);
 const File = mongoose.model('File', fileSchema);
 
-async function register(userData) {
+export async function register(userData) {
   try {
 
     const user = new User(userData);
@@ -44,7 +44,7 @@ async function register(userData) {
   }
 }
 
-async function upload(userFile) {
+export async function upload(userFile) {
   try {
 
     const fileHash = crypto.createHash('sha256').update(userFile.file).digest('hex');
@@ -73,4 +73,3 @@ async function upload(userFile) {
   }
 }
 
-export default { connection, register, upload };

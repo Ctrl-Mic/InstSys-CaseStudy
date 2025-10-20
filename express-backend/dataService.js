@@ -2,7 +2,7 @@ import  { StudentDatabase, StudentDataExtractor } from './utils/main.js';
 import retrieve_file from './src/modules/requestFile.js';
 import StudentSchema from './src/components/constructor.js';
 
-class Connector {
+export class Connector {
   constructor(connectionString = null) {
     this.db = new StudentDatabase(connectionString);
   }
@@ -10,13 +10,20 @@ class Connector {
   async DataTransfer() {
     try {
       
+      const fileDataArray = await retrieve_file();
+      
+      if (!fileDataArray || fileDataArray.length) {
+        console.log("No data returned from database");
+        return [];
+      }
 
-      const fileData = await retrieve_file('missio&vision.pdf');
-      console.log(fileData);
-      // await scanAndProcessFiles(response);
+      return fileDataArray;
 
     } catch (error) {
-
+      console.error('DataTransfer error:' ,error.message);
+      throw error;
+    } finally {
+      await this.db.close();
     }
     
   }
@@ -118,7 +125,4 @@ class Connector {
       .join(' ');
   }
 }
-
-export default Connector;
-
 
