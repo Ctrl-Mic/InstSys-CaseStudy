@@ -135,29 +135,5 @@ def main():
     else:
         print("⚠️ AIAnalyst has no start_ai_analyst() method.")
 
-    # --- AUTO-RUN: map images from Mongo, then build preview HTML ---
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))  # backend/
-    mapper = os.path.join(base_dir, "utils", "mongo_image_mapper.py")
-    preview = os.path.join(base_dir, "utils", "previewimages.py")
-
-    print("🧩 Running image mapper...")
-    try:
-        subprocess.run([sys.executable, mapper], check=True)
-    except FileNotFoundError:
-        print(f"⚠️ Image mapper not found at {mapper}. Skipping.")
-    except subprocess.CalledProcessError as e:
-        print(f"⚠️ Image mapper failed: {e}. Continuing.")
-
-    print("🖼️ Building HTML preview...")
-    try:
-        subprocess.run([sys.executable, preview], check=True)
-    except FileNotFoundError:
-        print(f"⚠️ Preview builder not found at {preview}. Skipping.")
-    except subprocess.CalledProcessError as e:
-        print(f"⚠️ Preview builder failed: {e}. Continuing.")
-
-    print("✅ Done. Open 'backend/image_preview.html' to view the AI response + images.")
-
-
 if __name__ == "__main__":
     main()
