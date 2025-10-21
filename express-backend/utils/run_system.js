@@ -27,6 +27,9 @@ class SchoolInformationSystem {
     this.corExtractor = new CORExcelExtractor();
     this.corManager = null; // Will be initialized after DB connection
     this.gradesManager = null;
+    this.teachingFacultyManager = null
+    this.teachingFacultyScheduleManager = null;
+    this.nonTeachingFacultyManager = null;
     this.queryAssistant = null;
     
     // Create readline interface for user input
@@ -37,6 +40,9 @@ class SchoolInformationSystem {
     
     console.log(`📁 Student Excel folder: ${this.studentExcelFolder}`);
     console.log(`📁 COR Excel folder: ${this.corExcelFolder}`);
+    console.log(`📁 Teaching Faculty Excel folder: ${this.teachingFacultyExcelFolder}`);
+    console.log(`📁 Teaching Faculty Schedule Excel folder: ${this.teachingFacultySchedExcelFolder}`);
+    console.log(`📁 Non-Teaching Faculty Excel folder: ${this.nonTeachingFacultyExcelFolder}`);
   }
 
   // Helper function to prompt user for input
@@ -58,7 +64,9 @@ class SchoolInformationSystem {
 
   let totalProcessed = 0;
 
-  // Process Student Excel Files FIRST (must be first!)
+  // ============================================================
+  // STEP 1: Process Student Excel Files FIRST (must be first!)
+  // ============================================================
   try {
     await fs.access(this.studentExcelFolder);
     const studentFiles = await fs.readdir(this.studentExcelFolder);
@@ -91,7 +99,9 @@ class SchoolInformationSystem {
     await fs.mkdir(this.studentExcelFolder, { recursive: true });
   }
 
-  // Process COR Excel Files
+  // ============================================================
+  // STEP 2: Process COR Excel Files
+  // ============================================================
   try {
     await fs.access(this.corExcelFolder);
     const corFiles = await fs.readdir(this.corExcelFolder);
@@ -125,7 +135,9 @@ class SchoolInformationSystem {
     await fs.mkdir(this.corExcelFolder, { recursive: true });
   }
 
-  // Process Student Grades Excel Files (AFTER students are loaded!)
+  // ============================================================
+  // STEP 3: Process Student Grades Excel Files
+  // ============================================================
   try {
     await fs.access(this.gradesExcelFolder);
     const gradesFiles = await fs.readdir(this.gradesExcelFolder);
@@ -185,6 +197,183 @@ class SchoolInformationSystem {
     await fs.mkdir(this.gradesExcelFolder, { recursive: true });
   }
 
+  // ============================================================
+  // STEP 4: Process Teaching Faculty Excel Files
+  // ============================================================
+  try {
+    await fs.access(this.teachingFacultyExcelFolder);
+    const facultyFiles = await fs.readdir(this.teachingFacultyExcelFolder);
+    const facultyExcelFiles = facultyFiles.filter(file => 
+      file.endsWith('.xlsx') || file.endsWith('.xls')
+    );
+
+    if (facultyExcelFiles.length > 0) {
+      console.log(`\n👨‍🏫 Found ${facultyExcelFiles.length} Teaching Faculty Excel file(s)`);
+      
+      const TeachingFacultyExtractor = require('./teaching_faculty_extractor');
+      const facultyExtractor = new TeachingFacultyExtractor();
+      
+      let facultyProcessed = 0;
+      let facultySkipped = 0;
+      
+      for (const file of facultyExcelFiles) {
+        const filePath = path.join(this.teachingFacultyExcelFolder, file);
+        console.log(`   Processing: ${file}`);
+        
+        try {
+          const facultyData = await facultyExtractor.processTeachingFacultyExcel(filePath);
+          
+          if (facultyData) {
+            const result = await this.teachingFacultyManager.storeTeachingFaculty(facultyData);
+            
+            if (result) {
+              totalProcessed++;
+              facultyProcessed++;
+              console.log(`   ✅ ${file}`);
+            } else {
+              facultySkipped++;
+              console.log(`   ❌ ${file} - Failed to store`);
+            }
+          } else {
+            facultySkipped++;
+            console.log(`   ❌ ${file} - Could not extract data`);
+          }
+        } catch (error) {
+          facultySkipped++;
+          console.error(`   ❌ ${file} - Error: ${error.message}`);
+        }
+      }
+      
+      if (facultySkipped > 0) {
+        console.log(`\n   ℹ️  Summary: ${facultyProcessed} processed, ${facultySkipped} skipped`);
+      }
+    } else {
+      console.log('\n👨‍🏫 No teaching faculty Excel files found');
+    }
+  } catch {
+    console.log('\n👨‍🏫 Teaching faculty Excel folder not found, creating...');
+    await fs.mkdir(this.teachingFacultyExcelFolder, { recursive: true });
+  }
+
+  // ============================================================
+  // STEP 5: Process Teaching Faculty Schedule Excel Files ← NEW!
+  // ============================================================
+  try {
+    await fs.access(this.teachingFacultySchedExcelFolder);
+    const facultySchedFiles = await fs.readdir(this.teachingFacultySchedExcelFolder);
+    const facultySchedExcelFiles = facultySchedFiles.filter(file => 
+      file.endsWith('.xlsx') || file.endsWith('.xls')
+    );
+
+    if (facultySchedExcelFiles.length > 0) {
+      console.log(`\n📅 Found ${facultySchedExcelFiles.length} Teaching Faculty Schedule Excel file(s)`);
+      
+      const TeachingFacultyScheduleExtractor = require('./teaching_faculty_schedule_extractor');
+      const scheduleExtractor = new TeachingFacultyScheduleExtractor();
+      
+      let schedProcessed = 0;
+      let schedSkipped = 0;
+      
+      for (const file of facultySchedExcelFiles) {
+        const filePath = path.join(this.teachingFacultySchedExcelFolder, file);
+        console.log(`   Processing: ${file}`);
+        
+        try {
+          const scheduleData = await scheduleExtractor.processTeachingFacultyScheduleExcel(filePath);
+          
+          if (scheduleData) {
+            const result = await this.teachingFacultyScheduleManager.storeTeachingFacultySchedule(scheduleData);
+            
+            if (result) {
+              totalProcessed++;
+              schedProcessed++;
+              console.log(`   ✅ ${file}`);
+            } else {
+              schedSkipped++;
+              console.log(`   ❌ ${file} - Failed to store`);
+            }
+          } else {
+            schedSkipped++;
+            console.log(`   ❌ ${file} - Could not extract data`);
+          }
+        } catch (error) {
+          schedSkipped++;
+          console.error(`   ❌ ${file} - Error: ${error.message}`);
+        }
+      }
+      
+      if (schedSkipped > 0) {
+        console.log(`\n   ℹ️  Summary: ${schedProcessed} processed, ${schedSkipped} skipped`);
+      }
+    } else {
+      console.log('\n📅 No teaching faculty schedule Excel files found');
+    }
+  } catch {
+    console.log('\n📅 Teaching faculty schedule Excel folder not found, creating...');
+    await fs.mkdir(this.teachingFacultySchedExcelFolder, { recursive: true });
+  }
+
+    // ============================================================
+  // STEP 6: Process Non-Teaching Faculty Excel Files ← NEW!
+  // ============================================================
+  try {
+    await fs.access(this.nonTeachingFacultyExcelFolder);
+    const nonTeachingFiles = await fs.readdir(this.nonTeachingFacultyExcelFolder);
+    const nonTeachingExcelFiles = nonTeachingFiles.filter(file => 
+      file.endsWith('.xlsx') || file.endsWith('.xls')
+    );
+
+    if (nonTeachingExcelFiles.length > 0) {
+      console.log(`\n👨‍💼 Found ${nonTeachingExcelFiles.length} Non-Teaching Faculty Excel file(s)`);
+      
+      const NonTeachingFacultyExtractor = require('./non_teaching_faculty_extractor');
+      const nonTeachingExtractor = new NonTeachingFacultyExtractor();
+      
+      let nonTeachingProcessed = 0;
+      let nonTeachingSkipped = 0;
+      
+      for (const file of nonTeachingExcelFiles) {
+        const filePath = path.join(this.nonTeachingFacultyExcelFolder, file);
+        console.log(`   Processing: ${file}`);
+        
+        try {
+          const facultyData = await nonTeachingExtractor.processNonTeachingFacultyExcel(filePath);
+          
+          if (facultyData) {
+            const result = await this.nonTeachingFacultyManager.storeNonTeachingFaculty(facultyData);
+            
+            if (result) {
+              totalProcessed++;
+              nonTeachingProcessed++;
+              console.log(`   ✅ ${file}`);
+            } else {
+              nonTeachingSkipped++;
+              console.log(`   ❌ ${file} - Failed to store`);
+            }
+          } else {
+            nonTeachingSkipped++;
+            console.log(`   ❌ ${file} - Could not extract data`);
+          }
+        } catch (error) {
+          nonTeachingSkipped++;
+          console.error(`   ❌ ${file} - Error: ${error.message}`);
+        }
+      }
+      
+      if (nonTeachingSkipped > 0) {
+        console.log(`\n   ℹ️  Summary: ${nonTeachingProcessed} processed, ${nonTeachingSkipped} skipped`);
+      }
+    } else {
+      console.log('\n👨‍💼 No non-teaching faculty Excel files found');
+    }
+  } catch {
+    console.log('\n👨‍💼 Non-teaching faculty Excel folder not found, creating...');
+    await fs.mkdir(this.nonTeachingFacultyExcelFolder, { recursive: true });
+  }
+
+  // ============================================================
+  // SUMMARY
+  // ============================================================
   console.log('\n' + '='.repeat(60));
   console.log(`✅ Auto-scan complete: ${totalProcessed} files processed`);
   console.log('='.repeat(60));
@@ -205,8 +394,17 @@ class SchoolInformationSystem {
     // Clear COR schedules
     await this.clearAllCORSchedules();
     
-    // Clear student grades (NEW)
+    // Clear student grades
     await this.gradesManager.clearAllGrades();
+    
+    // Clear teaching faculty
+    await this.teachingFacultyManager.clearAllTeachingFaculty();
+    
+    // Clear teaching faculty schedules
+    await this.teachingFacultyScheduleManager.clearAllTeachingFacultySchedules();
+    
+    // ← ADD THIS: Clear non-teaching faculty
+    await this.nonTeachingFacultyManager.clearAllNonTeachingFaculty();
     
     console.log('✅ All data cleared from database');
   } catch (error) {
@@ -323,6 +521,9 @@ async clearAllCORSchedules() {
   async showStatistics() {
   const stats = await this.db.getStatistics();
   const corStats = await this.corManager.getCORStatistics();
+  const facultyStats = await this.teachingFacultyManager.getTeachingFacultyStatistics();
+  const facultySchedStats = await this.teachingFacultyScheduleManager.getTeachingFacultyScheduleStatistics();
+  const nonTeachingStats = await this.nonTeachingFacultyManager.getNonTeachingFacultyStatistics();  // ← ADD THIS
 
   console.log('\n' + '='.repeat(60));
   console.log('📊 SYSTEM STATISTICS');
@@ -340,7 +541,7 @@ async clearAllCORSchedules() {
     });
   }
 
-  // Add COR statistics
+  // COR statistics
   if (corStats && corStats.total_schedules > 0) {
     console.log('\n📚 COR SCHEDULES:');
     console.log(`   Total Schedules: ${corStats.total_schedules}`);
@@ -357,21 +558,415 @@ async clearAllCORSchedules() {
     console.log('\n📚 COR SCHEDULES:');
     console.log('   No COR schedules loaded');
   }
+
+  // Teaching faculty statistics
+  if (facultyStats && facultyStats.total_faculty > 0) {
+  console.log('\n👨‍🏫 TEACHING FACULTY:');
+  console.log(`   Total Faculty: ${facultyStats.total_faculty}`);
+  
+  // ← ADD THIS: Show pending media count
+  const pendingTeaching = await this.teachingFacultyManager.getTeachingPendingMedia();
+  console.log(`   Pending Media: ${pendingTeaching.length}`);
+
+  if (Object.keys(facultyStats.by_department).length > 0) {
+    console.log('\n   By Department:');
+    Object.entries(facultyStats.by_department).forEach(([dept, count]) => {
+      console.log(`      • ${dept}: ${count} faculty`);
+    });
+  }
+
+  if (Object.keys(facultyStats.by_position).length > 0) {
+    console.log('\n   By Position:');
+    Object.entries(facultyStats.by_position).forEach(([position, count]) => {
+      console.log(`      • ${position}: ${count}`);
+    });
+  }
+} else {
+  console.log('\n👨‍🏫 TEACHING FACULTY:');
+  console.log('   No teaching faculty loaded');
 }
 
-  async showPendingMedia() {
-    const pending = await this.db.getPendingMediaStudents();
+  // Teaching faculty schedule statistics
+  if (facultySchedStats && facultySchedStats.total_schedules > 0) {
+    console.log('\n📅 FACULTY SCHEDULES:');
+    console.log(`   Total Schedules: ${facultySchedStats.total_schedules}`);
+    console.log(`   Total Classes: ${facultySchedStats.total_classes}`);
 
-    if (pending.length === 0) {
-      console.log('\n✅ No students waiting for media!');
+    if (Object.keys(facultySchedStats.by_department).length > 0) {
+      console.log('\n   By Department:');
+      Object.entries(facultySchedStats.by_department).forEach(([dept, count]) => {
+        console.log(`      • ${dept}: ${count} schedule(s)`);
+      });
+    }
+  } else {
+    console.log('\n📅 FACULTY SCHEDULES:');
+    console.log('   No faculty schedules loaded');
+  }
+
+  // ← ADD THIS: Non-teaching faculty statistics
+  if (nonTeachingStats && nonTeachingStats.total_faculty > 0) {
+  console.log('\n👨‍💼 NON-TEACHING FACULTY:');
+  console.log(`   Total Non-Teaching Faculty: ${nonTeachingStats.total_faculty}`);
+  
+  // ← ADD THIS: Show pending media count
+  const pendingNonTeaching = await this.nonTeachingFacultyManager.getNonTeachingPendingMedia();
+  console.log(`   Pending Media: ${pendingNonTeaching.length}`);
+
+  if (Object.keys(nonTeachingStats.by_department).length > 0) {
+    console.log('\n   By Department:');
+    Object.entries(nonTeachingStats.by_department).forEach(([dept, count]) => {
+      console.log(`      • ${dept}: ${count} staff`);
+    });
+  }
+
+  if (Object.keys(nonTeachingStats.by_position).length > 0) {
+    console.log('\n   By Position:');
+    Object.entries(nonTeachingStats.by_position).forEach(([position, count]) => {
+      console.log(`      • ${position}: ${count}`);
+    });
+  }
+} else {
+  console.log('\n👨‍💼 NON-TEACHING FACULTY:');
+  console.log('   No non-teaching faculty loaded');
+}
+}
+
+async viewNonTeachingFaculty() {
+  console.log('\n' + '='.repeat(60));
+  console.log('👨‍💼 NON-TEACHING FACULTY');
+  console.log('='.repeat(60));
+
+  // Get statistics
+  const stats = await this.nonTeachingFacultyManager.getNonTeachingFacultyStatistics();
+
+  if (!stats || stats.total_faculty === 0) {
+    console.log('\n⚠️  No non-teaching faculty found in database');
+    console.log('💡 Place non-teaching faculty Excel files in uploaded_files/non_teaching_faculty_excel/ and restart');
+    return;
+  }
+
+  console.log(`\n📊 Non-Teaching Faculty Statistics:`);
+  console.log(`   Total Staff: ${stats.total_faculty}`);
+
+  console.log(`\n📚 By Department:`);
+  Object.entries(stats.by_department).forEach(([dept, count]) => {
+    // Make department names more readable
+    const deptDisplay = dept.replace(/_/g, ' ').split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+    console.log(`   • ${deptDisplay}: ${count} staff`);
+  });
+
+  console.log(`\n📖 By Position:`);
+  Object.entries(stats.by_position).forEach(([position, count]) => {
+    console.log(`   • ${position}: ${count}`);
+  });
+
+  // Ask if they want to view specific faculty
+  const viewDetails = await this.prompt('\nView detailed non-teaching faculty list? (yes/no): ');
+
+  if (viewDetails.trim().toLowerCase() === 'yes') {
+    console.log('\nFilter by department:');
+    console.log('1. REGISTRAR - Registrar Office');
+    console.log('2. ACCOUNTING - Accounting & Finance');
+    console.log('3. GUIDANCE - Guidance Office');
+    console.log('4. LIBRARY - Library Services');
+    console.log('5. HEALTH_SERVICES - Health Services');
+    console.log('6. MAINTENANCE_CUSTODIAL - Maintenance & Custodial');
+    console.log('7. SECURITY - Security Services');
+    console.log('8. SYSTEM_ADMIN - IT & System Administration');
+    console.log('9. ADMIN_SUPPORT - Administrative Support');
+    console.log('10. All Departments');
+
+    const deptChoice = await this.prompt('\nSelect (1-10): ');
+    
+    const deptMap = {
+      '1': 'REGISTRAR',
+      '2': 'ACCOUNTING',
+      '3': 'GUIDANCE',
+      '4': 'LIBRARY',
+      '5': 'HEALTH_SERVICES',
+      '6': 'MAINTENANCE_CUSTODIAL',
+      '7': 'SECURITY',
+      '8': 'SYSTEM_ADMIN',
+      '9': 'ADMIN_SUPPORT',
+      '10': null
+    };
+
+    const department = deptMap[deptChoice];
+
+    let faculty;
+    if (department) {
+      faculty = await this.nonTeachingFacultyManager.getNonTeachingFacultyByDepartment(department);
+    } else {
+      faculty = await this.nonTeachingFacultyManager.getAllNonTeachingFaculty();
+    }
+
+    if (faculty.length === 0) {
+      console.log('\n⚠️  No faculty found');
       return;
     }
 
-    console.log('\n' + '='.repeat(60));
-    console.log(`⏳ STUDENTS WAITING FOR MEDIA (${pending.length})`);
+    console.log(`\n✅ Found ${faculty.length} non-teaching staff member(s):`);
     console.log('='.repeat(60));
 
-    pending.forEach((student, index) => {
+    faculty.forEach((fac, index) => {
+  const deptDisplay = fac.department.replace(/_/g, ' ').split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+  
+  console.log(`\n${index + 1}. ${fac.full_name}`);
+  console.log(`   Department: ${deptDisplay}`);
+  console.log(`   Position: ${fac.position || 'N/A'}`);
+  console.log(`   Email: ${fac.email || 'N/A'}`);
+  console.log(`   Phone: ${fac.phone || 'N/A'}`);
+  console.log(`   Employment Status: ${fac.employment_status || 'N/A'}`);
+  console.log(`   Completion: ${fac.completion_percentage?.toFixed(1) || '0'}%`);  // ← ADD THIS
+  
+  // Show media status
+  const imageStatus = fac.image?.status === 'complete' ? '📸 Complete' : '📸 Waiting';
+  const audioStatus = fac.audio?.status === 'complete' ? '🎤 Complete' : '🎤 Waiting';
+  const descriptorStatus = fac.descriptor ? '🔑 Complete' : '🔑 Waiting';
+  console.log(`   Media: ${imageStatus} | ${audioStatus} | ${descriptorStatus}`);
+  
+  console.log(`   Source: ${fac.source_file}`);
+});
+
+    // Option to view full details
+    const viewFull = await this.prompt('\nView full details for a specific staff? Enter number (or press Enter to skip): ');
+    
+    if (viewFull && parseInt(viewFull) > 0 && parseInt(viewFull) <= faculty.length) {
+      const selectedFaculty = faculty[parseInt(viewFull) - 1];
+      
+      console.log('\n' + '='.repeat(60));
+      console.log('📋 FULL STAFF DETAILS');
+      console.log('='.repeat(60));
+      console.log('\n' + selectedFaculty.formatted_text);
+    }
+  }
+}
+
+async viewTeachingFacultySchedules() {
+  console.log('\n' + '='.repeat(60));
+  console.log('📅 TEACHING FACULTY SCHEDULES');
+  console.log('='.repeat(60));
+
+  // Get statistics
+  const stats = await this.teachingFacultyScheduleManager.getTeachingFacultyScheduleStatistics();
+
+  if (!stats || stats.total_schedules === 0) {
+    console.log('\n⚠️  No teaching faculty schedules found in database');
+    console.log('💡 Place faculty schedule Excel files in uploaded_files/teaching_faculty_sched_excel/ and restart');
+    return;
+  }
+
+  console.log(`\n📊 Schedule Statistics:`);
+  console.log(`   Total Schedules: ${stats.total_schedules}`);
+  console.log(`   Total Classes: ${stats.total_classes}`);
+
+  console.log(`\n📚 By Department:`);
+  Object.entries(stats.by_department).forEach(([dept, count]) => {
+    console.log(`   • ${dept}: ${count} schedule(s)`);
+  });
+
+  // Ask if they want to view specific schedules
+  const viewDetails = await this.prompt('\nView detailed schedules? (yes/no): ');
+
+  if (viewDetails.trim().toLowerCase() === 'yes') {
+    console.log('\nFilter by department:');
+    console.log('1. CAS - Arts & Sciences');
+    console.log('2. CCS - Computer Studies');
+    console.log('3. CHTM - Hospitality & Tourism');
+    console.log('4. CBA - Business Administration');
+    console.log('5. CTE - Teacher Education');
+    console.log('6. COE - Engineering');
+    console.log('7. CON - Nursing');
+    console.log('8. ADMIN - Administration');
+    console.log('9. All Departments');
+
+    const deptChoice = await this.prompt('\nSelect (1-9): ');
+    
+    const deptMap = {
+      '1': 'CAS',
+      '2': 'CCS',
+      '3': 'CHTM',
+      '4': 'CBA',
+      '5': 'CTE',
+      '6': 'COE',
+      '7': 'CON',
+      '8': 'ADMIN',
+      '9': null
+    };
+
+    const department = deptMap[deptChoice];
+
+    let schedules;
+    if (department) {
+      schedules = await this.teachingFacultyScheduleManager.getTeachingFacultySchedulesByDepartment(department);
+    } else {
+      schedules = await this.teachingFacultyScheduleManager.getAllTeachingFacultySchedules();
+    }
+
+    if (schedules.length === 0) {
+      console.log('\n⚠️  No schedules found');
+      return;
+    }
+
+    console.log(`\n✅ Found ${schedules.length} schedule(s):`);
+    console.log('='.repeat(60));
+
+    schedules.forEach((sched, index) => {
+      console.log(`\n${index + 1}. ${sched.adviser_name}`);
+      console.log(`   Department: ${sched.department}`);
+      console.log(`   Total Classes: ${sched.total_subjects}`);
+      console.log(`   Days Teaching: ${sched.days_teaching}`);
+      console.log(`   Source: ${sched.source_file}`);
+    });
+
+    // Option to view full schedule
+    const viewFull = await this.prompt('\nView full schedule for a specific faculty? Enter number (or press Enter to skip): ');
+    
+    if (viewFull && parseInt(viewFull) > 0 && parseInt(viewFull) <= schedules.length) {
+      const selectedSchedule = schedules[parseInt(viewFull) - 1];
+      
+      console.log('\n' + '='.repeat(60));
+      console.log('📋 FULL FACULTY SCHEDULE');
+      console.log('='.repeat(60));
+      console.log('\n' + selectedSchedule.formatted_text);
+    }
+  }
+}
+
+  async viewTeachingFaculty() {
+  console.log('\n' + '='.repeat(60));
+  console.log('👨‍🏫 TEACHING FACULTY');
+  console.log('='.repeat(60));
+
+  // Get statistics
+  const stats = await this.teachingFacultyManager.getTeachingFacultyStatistics();
+
+  if (!stats || stats.total_faculty === 0) {
+    console.log('\n⚠️  No teaching faculty found in database');
+    console.log('💡 Place teaching faculty Excel files in uploaded_files/teaching_faculty_excel/ and restart');
+    return;
+  }
+
+  console.log(`\n📊 Faculty Statistics:`);
+  console.log(`   Total Faculty: ${stats.total_faculty}`);
+
+  console.log(`\n📚 By Department:`);
+  Object.entries(stats.by_department).forEach(([dept, count]) => {
+    console.log(`   • ${dept}: ${count} faculty`);
+  });
+
+  console.log(`\n📖 By Position:`);
+  Object.entries(stats.by_position).forEach(([position, count]) => {
+    console.log(`   • ${position}: ${count}`);
+  });
+
+  // Ask if they want to view specific faculty
+  const viewDetails = await this.prompt('\nView detailed faculty list? (yes/no): ');
+
+  if (viewDetails.trim().toLowerCase() === 'yes') {
+    console.log('\nFilter by department:');
+    console.log('1. CAS - Arts & Sciences');
+    console.log('2. CCS - Computer Studies');
+    console.log('3. CHTM - Hospitality & Tourism');
+    console.log('4. CBA - Business Administration');
+    console.log('5. CTE - Teacher Education');
+    console.log('6. COE - Engineering');
+    console.log('7. CON - Nursing');
+    console.log('8. ADMIN - Administration');
+    console.log('9. All Departments');
+
+    const deptChoice = await this.prompt('\nSelect (1-9): ');
+    
+    const deptMap = {
+      '1': 'CAS',
+      '2': 'CCS',
+      '3': 'CHTM',
+      '4': 'CBA',
+      '5': 'CTE',
+      '6': 'COE',
+      '7': 'CON',
+      '8': 'ADMIN',
+      '9': null
+    };
+
+    const department = deptMap[deptChoice];
+
+    let faculty;
+    if (department) {
+      faculty = await this.teachingFacultyManager.getTeachingFacultyByDepartment(department);
+    } else {
+      faculty = await this.teachingFacultyManager.getAllTeachingFaculty();
+    }
+
+    if (faculty.length === 0) {
+      console.log('\n⚠️  No faculty found');
+      return;
+    }
+
+    console.log(`\n✅ Found ${faculty.length} faculty member(s):`);
+    console.log('='.repeat(60));
+
+    faculty.forEach((fac, index) => {
+  console.log(`\n${index + 1}. ${fac.full_name}`);
+  console.log(`   Department: ${fac.department}`);
+  console.log(`   Position: ${fac.position || 'N/A'}`);
+  console.log(`   Email: ${fac.email || 'N/A'}`);
+  console.log(`   Phone: ${fac.phone || 'N/A'}`);
+  console.log(`   Employment Status: ${fac.employment_status || 'N/A'}`);
+  console.log(`   Completion: ${fac.completion_percentage?.toFixed(1) || '0'}%`);  // ← ADD THIS
+  
+  // Show media status
+  const imageStatus = fac.image?.status === 'complete' ? '📸 Complete' : '📸 Waiting';
+  const audioStatus = fac.audio?.status === 'complete' ? '🎤 Complete' : '🎤 Waiting';
+  const descriptorStatus = fac.descriptor ? '🔑 Complete' : '🔑 Waiting';
+  console.log(`   Media: ${imageStatus} | ${audioStatus} | ${descriptorStatus}`);
+  
+  console.log(`   Source: ${fac.source_file}`);
+});
+
+    // Option to view full details
+    const viewFull = await this.prompt('\nView full details for a specific faculty? Enter number (or press Enter to skip): ');
+    
+    if (viewFull && parseInt(viewFull) > 0 && parseInt(viewFull) <= faculty.length) {
+      const selectedFaculty = faculty[parseInt(viewFull) - 1];
+      
+      console.log('\n' + '='.repeat(60));
+      console.log('📋 FULL FACULTY DETAILS');
+      console.log('='.repeat(60));
+      console.log('\n' + selectedFaculty.formatted_text);
+    }
+  }
+}
+
+  async showPendingMedia() {
+  // Get student pending media
+  const pendingStudents = await this.db.getPendingMediaStudents();
+  
+  // Get teaching faculty pending media
+  const pendingTeaching = await this.teachingFacultyManager.getTeachingPendingMedia();
+  
+  // Get non-teaching faculty pending media
+  const pendingNonTeaching = await this.nonTeachingFacultyManager.getNonTeachingPendingMedia();
+
+  const totalPending = pendingStudents.length + pendingTeaching.length + pendingNonTeaching.length;
+
+  if (totalPending === 0) {
+    console.log('\n✅ No one waiting for media!');
+    return;
+  }
+
+  console.log('\n' + '='.repeat(60));
+  console.log(`⏳ PENDING MEDIA (${totalPending} total)`);
+  console.log('='.repeat(60));
+
+  // Show Students
+  if (pendingStudents.length > 0) {
+    console.log(`\n👥 STUDENTS (${pendingStudents.length}):`);
+    pendingStudents.slice(0, 10).forEach((student, index) => {
       console.log(`\n${index + 1}. ${student.full_name || 'N/A'} (${student.student_id})`);
       console.log(`   Course: ${student.course} | Year: ${student.year} | Section: ${student.section}`);
 
@@ -381,7 +976,56 @@ async clearAllCORSchedules() {
 
       console.log(`   Waiting for: ${waiting.join(', ')}`);
     });
+
+    if (pendingStudents.length > 10) {
+      console.log(`\n   ... and ${pendingStudents.length - 10} more students`);
+    }
   }
+
+  // ← ADD THIS: Show Teaching Faculty
+  if (pendingTeaching.length > 0) {
+    console.log(`\n\n👨‍🏫 TEACHING FACULTY (${pendingTeaching.length}):`);
+    pendingTeaching.slice(0, 10).forEach((faculty, index) => {
+      console.log(`\n${index + 1}. ${faculty.full_name || 'N/A'} (${faculty.faculty_id})`);
+      console.log(`   Position: ${faculty.position} | Department: ${faculty.department}`);
+
+      const waiting = [];
+      if (faculty.waiting_for.image) waiting.push('📸 Image');
+      if (faculty.waiting_for.audio) waiting.push('🎤 Audio');
+      if (faculty.waiting_for.descriptor) waiting.push('🔑 Descriptor');
+
+      console.log(`   Waiting for: ${waiting.join(', ')}`);
+    });
+
+    if (pendingTeaching.length > 10) {
+      console.log(`\n   ... and ${pendingTeaching.length - 10} more teaching faculty`);
+    }
+  }
+
+  // Show Non-Teaching Faculty
+  if (pendingNonTeaching.length > 0) {
+    console.log(`\n\n👨‍💼 NON-TEACHING FACULTY (${pendingNonTeaching.length}):`);
+    pendingNonTeaching.slice(0, 10).forEach((faculty, index) => {
+      const deptDisplay = faculty.department.replace(/_/g, ' ').split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+      console.log(`\n${index + 1}. ${faculty.full_name || 'N/A'} (${faculty.faculty_id})`);
+      console.log(`   Position: ${faculty.position} | Department: ${deptDisplay}`);
+
+      const waiting = [];
+      if (faculty.waiting_for.image) waiting.push('📸 Image');
+      if (faculty.waiting_for.audio) waiting.push('🎤 Audio');
+      if (faculty.waiting_for.descriptor) waiting.push('🔑 Descriptor');
+
+      console.log(`   Waiting for: ${waiting.join(', ')}`);
+    });
+
+    if (pendingNonTeaching.length > 10) {
+      console.log(`\n   ... and ${pendingNonTeaching.length - 10} more non-teaching faculty`);
+    }
+  }
+}
 
   async searchStudents() {
     console.log('\n' + '='.repeat(60));
@@ -886,65 +1530,74 @@ async clearAllCORSchedules() {
 
 
   async mainMenu() {
-    while (true) {
-      console.log('\n' + '='.repeat(60));
-      console.log('🎓 SCHOOL INFORMATION SYSTEM - MONGODB');
-      console.log('='.repeat(60));
-      console.log('\n1. Process Excel Files (Manual)');
-      console.log('2. Manual Student Entry');
-      console.log('3. Search Students');
-      console.log('4. Show Pending Media');
-      console.log('5. Show Statistics');
-      console.log('6. View by Department');
-      console.log('7. View COR Schedules');
-      console.log('8. Fix COR Departments (Auto)'); 
-      console.log('9. Clear All Data (Manual)');
-      console.log('10. Exit'); 
+  while (true) {
+    console.log('\n' + '='.repeat(60));
+    console.log('🎓 SCHOOL INFORMATION SYSTEM - MONGODB');
+    console.log('='.repeat(60));
+    console.log('\n1. Process Excel Files (Manual)');
+    console.log('2. Manual Student Entry');
+    console.log('3. Search Students');
+    console.log('4. Show Pending Media');
+    console.log('5. Show Statistics');
+    console.log('6. View by Department');
+    console.log('7. View COR Schedules');
+    console.log('8. Fix COR Departments (Auto)');
+    console.log('9. View Teaching Faculty');
+    console.log('10. View Teaching Faculty Schedules');
+    console.log('11. View Non-Teaching Faculty');  // ← ADD THIS
+    console.log('12. Clear All Data (Manual)');
+    console.log('13. Cleanup Orphaned Collections');
+    console.log('14. Query Assistant');
+    console.log('15. Exit');
 
-      const choice = (await this.prompt('\nSelect option (1-9): ')).trim();
+    const choice = (await this.prompt('\nSelect option (1-15): ')).trim();
 
-      try {
-        if (choice === '1') {
-          await this.scanAndProcessFiles();
-        } else if (choice === '2') {
-          await this.manualEntry();
-        } else if (choice === '3') {
-          await this.searchStudents();
-        } else if (choice === '4') {
-          await this.showPendingMedia();
-        } else if (choice === '5') {
-          await this.showStatistics();
-        } else if (choice === '6') {
-          await this.viewByDepartment();
-        } else if (choice === '7') {
-          await this.viewCORSchedules();  
-        }
-        else if (choice === '8') {
-          await this.fixExistingCORDepartments();
-        }
-        else if (choice === '9') {
-          await this.clearAllData();
-        }
-        else if (choice === '10') {
-          await this.runQueryAssistant();  // ← NEW
-        }
-        else if (choice === '11') {
-          console.log('\n👋 Exiting...');
-          break;
-        } else {
-          console.log('\n❌ Invalid option. Please select 1-8');
-        }
+    try {
+      if (choice === '1') {
+        await this.scanAndProcessFiles();
+      } else if (choice === '2') {
+        await this.manualEntry();
+      } else if (choice === '3') {
+        await this.searchStudents();
+      } else if (choice === '4') {
+        await this.showPendingMedia();
+      } else if (choice === '5') {
+        await this.showStatistics();
+      } else if (choice === '6') {
+        await this.viewByDepartment();
+      } else if (choice === '7') {
+        await this.viewCORSchedules();
+      } else if (choice === '8') {
+        await this.fixExistingCORDepartments();
+      } else if (choice === '9') {
+        await this.viewTeachingFaculty();
+      } else if (choice === '10') {
+        await this.viewTeachingFacultySchedules();
+      } else if (choice === '11') {
+        await this.viewNonTeachingFaculty();  // ← ADD THIS
+      } else if (choice === '12') {
+        await this.clearAllData();
+      } else if (choice === '13') {
+        await this.cleanupOrphanedCollections();
+      } else if (choice === '14') {
+        await this.runQueryAssistant();
+      } else if (choice === '15') {
+        console.log('\n👋 Exiting...');
+        break;
+      } else {
+        console.log('\n❌ Invalid option. Please select 1-15');
+      }
 
-        if (choice !== '8') {
-          await this.prompt('\nPress Enter to continue...');
-        }
-
-      } catch (error) {
-        console.error(`❌ Error: ${error.message}`);
+      if (choice !== '15') {
         await this.prompt('\nPress Enter to continue...');
       }
+
+    } catch (error) {
+      console.error(`❌ Error: ${error.message}`);
+      await this.prompt('\nPress Enter to continue...');
     }
   }
+}
 
   async runQueryAssistant() {
   console.log('\n' + '='.repeat(60));
@@ -1020,38 +1673,41 @@ async clearAllCORSchedules() {
 }
 
   async run() {
-    console.log('🎓 Starting School Information System...');
-    console.log('='.repeat(60));
+  console.log('🎓 Starting School Information System...');
+  console.log('='.repeat(60));
 
-    try {
-      // Connect to database
-      await this.db.connect();
-      
-      // Initialize COR manager after DB connection
-      this.corManager = new CORScheduleManager(this.db);
-      this.gradesManager = new StudentGradesManager(this.db);  
-      this.queryAssistant = new QueryAssistant(this.db, this.corManager, this.gradesManager);
+  try {
+    // Connect to database
+    await this.db.connect();
+    
+    // Initialize managers after DB connection
+    this.corManager = new CORScheduleManager(this.db);
+    this.gradesManager = new StudentGradesManager(this.db);
+    this.teachingFacultyManager = new TeachingFacultyManager(this.db);
+    this.teachingFacultyScheduleManager = new TeachingFacultyScheduleManager(this.db);
+    this.nonTeachingFacultyManager = new NonTeachingFacultyManager(this.db);  // ← ADD THIS
+    this.queryAssistant = new QueryAssistant(this.db, this.corManager, this.gradesManager);
 
-      // AUTO-SCAN: Process all files on startup
-      await this.autoScanAndProcessAllFiles();
+    // AUTO-SCAN: Process all files on startup
+    await this.autoScanAndProcessAllFiles();
 
-      // Show initial stats
-      await this.showStatistics();
+    // Show initial stats
+    await this.showStatistics();
 
-      // Start main menu
-      await this.mainMenu();
+    // Start main menu
+    await this.mainMenu();
 
-    } catch (error) {
-      console.error(`\n❌ System error: ${error.message}`);
-    } finally {
-      // AUTO-CLEANUP: Clear data before exit
-      await this.autoCleanupOnExit();
-      
-      await this.db.close();
-      this.rl.close();
-      console.log('👋 Disconnected from MongoDB');
-    }
+  } catch (error) {
+    console.error(`\n❌ System error: ${error.message}`);
+  } finally {
+    // AUTO-CLEANUP: Clear data before exit
+    await this.autoCleanupOnExit();
+    
+    await this.db.close();
+    this.rl.close();
+    console.log('👋 Disconnected from MongoDB');
   }
+}
 }
 
 async function main() {

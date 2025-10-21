@@ -1,76 +1,100 @@
-import json, os, html
+import json
+import os
+import webbrowser
+from html import escape
 
-# === Resolve Paths ===
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-json_path = os.path.join(base_path, "latest_response_data_with_images.json")
-html_path = os.path.join(base_path, "image_preview.html")
+def create_html_preview_with_images():
 
-# === Load the latest AI response with image map ===
-with open(json_path, "r", encoding="utf-8") as f:
-    data = json.load(f)
+    print("Generating HTML preview with rendered images...")
 
-ai_response = data.get("ai_response", "")
-image_map = data.get("image_map", {})
-by_id = image_map.get("by_id", {})
-by_name = image_map.get("by_name", {})
+    try:
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        json_input_path = os.path.join(base_path, "latest_response_data.json")
+        html_output_path = os.path.join(base_path, "response_preview.html")
+    except NameError:
+        json_input_path = "latest_response_data.json"
+        html_output_path = "response_preview.html"
 
-# === Start building the HTML ===
-html_parts = [
-    "<html><head>",
-    "<meta charset='utf-8'/>",
-    "<title>AI Response + Image Preview</title>",
-    """
-    <style>
-        body { font-family: Arial, sans-serif; margin: 30px; background: #fafafa; color: #222; }
-        h1, h2 { font-family: 'Segoe UI', sans-serif; color: #333; }
-        .response-box {
-            background: #fff; border: 1px solid #ddd; padding: 20px;
-            border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            white-space: pre-wrap;
-        }
-        .image-section { margin-bottom: 40px; }
-        .image-grid {
-            display: flex; flex-wrap: wrap; gap: 15px;
-        }
-        .img-card {
-            text-align: center; background: #fff; padding: 10px;
-            border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            width: 150px;
-        }
-        .img-card img {
-            width: 130px; height: 130px; object-fit: cover; border-radius: 8px; border: 1px solid #ccc;
-        }
-        .img-card small { display: block; margin-top: 8px; font-size: 0.9em; color: #555; }
-    </style>
-    """,
-    "</head><body>"
-]
-
-# === Add AI Response Section ===
-html_parts.append("<h1>AI Response: </h1>")
-html_parts.append(f"<div class='response-box'>{html.escape(ai_response)}</div>")
-
-# === Add Image Previews ===
-def add_image_section(title, img_dict):
-    if not img_dict:
+    try:
+        with open(json_input_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print(f"Error: Input file not found at '{json_input_path}'")
         return
-    html_parts.append(f"<div class='image-section'><h2>{title}</h2><div class='image-grid'>")
-    for key, base64_data in img_dict.items():
-        html_parts.append(f"""
-        <div class="img-card">
-            <img src="data:image/jpeg;base64,{base64_data}" alt="{key}" />
-            <small>{html.escape(key)}</small>
+    except json.JSONDecodeError:
+        print(f"Error: Could not parse JSON from '{json_input_path}'.")
+        return
+
+    ai_response = data.get("ai_response", "No AI response found.")
+    image_map = data.get("image_map", {"by_id": {}, "by_name": {}})
+
+    formatted_ai_response = escape(ai_response).replace('\n', '<br>')
+
+    images_by_id_html = ""
+    if image_map.get("by_id"):
+        for student_id, base64_data in image_map["by_id"].items():
+            images_by_id_html += f"""
+            <div class="image-card">
+                <img src="data:image/png;base64,{base64_data}" alt="Image for {escape(student_id)}">
+                <p class="caption">{escape(student_id)}</p>
+            </div>
+            """
+    else:
+        images_by_id_html = "<p>No images found by ID.</p>"
+
+    images_by_name_html = ""
+    if image_map.get("by_name"):
+        for name, base64_data in image_map["by_name"].items():
+            images_by_name_html += f"""
+            <div class="image-card">
+                <img src="data:image/png;base64,{base64_data}" alt="Image for {escape(name)}">
+                <p class="caption">{escape(name)}</p>
+            </div>
+            """
+    else:
+        images_by_name_html = "<p>No images found by name.</p>"
+        
+    html_template = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>AI Response Preview</title>
+        <style>
+            body {{ font-family: sans-serif; background-color: #121212; color: #e0e0e0; line-height: 1.6; padding: 20px; }}
+            .container {{ max-width: 90%; margin: auto; background-color: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 15px 30px; }}
+            h2 {{ color: #bb86fc; border-bottom: 2px solid #333; padding-bottom: 10px; }}
+            h3 {{ color: #03dac6; margin-top: 25px; }}
+            .image-gallery {{ display: flex; flex-wrap: wrap; gap: 20px; margin-top: 15px; padding-top: 10px; border-top: 1px solid #333;}}
+            .image-card {{ background-color: #252525; border: 1px solid #3c3c3c; border-radius: 8px; padding: 10px; text-align: center; width: 220px; }}
+            .image-card img {{ max-width: 100%; height: auto; border-radius: 4px; border: 1px solid #444; }}
+            .caption {{ margin-top: 10px; font-size: 0.9em; color: #ccc; word-wrap: break-word; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>AI Response</h2>
+            <p>{formatted_ai_response}</p>
+            <hr style="border-color: #333; margin: 30px 0;">
+            <h2>Mapped Images</h2>
+            <h3>Found by ID:</h3>
+            <div class="image-gallery">{images_by_id_html}</div>
+            <h3>Found by Name:</h3>
+            <div class="image-gallery">{images_by_name_html}</div>
         </div>
-        """)
-    html_parts.append("</div></div>")
+    </body>
+    </html>
+    """
 
-add_image_section("This is who she is: ", by_id)
-add_image_section("By Name (Without ID Match)", by_name)
+    with open(html_output_path, "w", encoding="utf-8") as f:
+        f.write(html_template)
 
-html_parts.append("</body></html>")
+    print(f"HTML preview with images created: '{os.path.realpath(html_output_path)}'")
+    
+    try:
+        webbrowser.open_new_tab(f'file://{os.path.realpath(html_output_path)}')
+    except Exception as e:
+        print(f"Could not automatically open the file in a browser: {e}")
 
-# === Save HTML ===
-with open(html_path, "w", encoding="utf-8") as f:
-    f.write("\n".join(html_parts))
-
-print(f"✅ AI response + image preview generated successfully!\n{html_path}")
+if __name__ == "__main__":
+    create_html_preview_with_images()
