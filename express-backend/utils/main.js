@@ -598,6 +598,7 @@ async getDepartmentStatistics(department) {
 export class StudentDataExtractor {
   static async processExcel(filePath, db) {
     try {
+
       const workbook = xlsx.readFile(filePath);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -648,6 +649,8 @@ export class StudentDataExtractor {
         }
 
         if (studentData.student_id || studentData.full_name) {
+
+          console.log(`testing the data: ${JSON.stringify(studentData, null, 2)}`);
           const result = await db.createStudentRecord(studentData, 'file_extraction');
           if (result) processedCount++;
         }

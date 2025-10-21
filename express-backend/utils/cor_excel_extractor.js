@@ -1,7 +1,7 @@
 // cor_excel_extractor.js
 import * as xlsx from 'xlsx';
 import path from 'path';
-import { __courseNameMap } from  './'
+import { __courseNameMap } from  '../src/components/mapper.js'
 
  class CORExcelExtractor {
   constructor() {
@@ -282,7 +282,7 @@ import { __courseNameMap } from  './'
   
   if (field === 'Program') {
     // Map full course names to codes (NEW!)
-    const courseNameMap = 
+    const courseNameMap = __courseNameMap;
     
     const valueUpper = value.toUpperCase();
     

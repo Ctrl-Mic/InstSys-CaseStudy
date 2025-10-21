@@ -22,6 +22,7 @@ export class StudentDatabase {
 
   async connect() {
   try {
+    
     this.client = new MongoClient(this.connectionString, {
       serverSelectionTimeoutMS: 5000
     });
@@ -90,6 +91,8 @@ _getCollectionByDepartment(department) {
 
   async createStudentRecord(data, source = 'file_extraction') {
   try {
+
+    console.log(data);
     const studentDoc = {
       student_id: data.student_id || '',
       surname: data.surname || '',

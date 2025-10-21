@@ -27,6 +27,7 @@
     "express": "^5.1.0",
     "mongodb": "^6.3.0",
     "pdf-parse": "^2.4.3",
+    "pdf2json": "^4.0.0",
     "request": "^2.88.2",
     "xlsx": "^0.18.5"
   },

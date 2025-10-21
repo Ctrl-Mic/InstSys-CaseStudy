@@ -1,31 +1,38 @@
-import  { StudentDatabase, StudentDataExtractor } from './utils/main.js';
+import { StudentDatabase, StudentDataExtractor } from './src/modules/main.js';
+import { StudentSchema } from './src/components/constructor.js';
 import retrieve_file from './src/modules/requestFile.js';
-import StudentSchema from './src/components/constructor.js';
 
-export class Connector {
+class Connector {
   constructor(connectionString = null) {
     this.db = new StudentDatabase(connectionString);
   }
 
   async DataTransfer() {
     try {
-      
+
+      await this.db.connect();
+
       const fileDataArray = await retrieve_file();
-      
-      if (!fileDataArray || fileDataArray.length) {
+      if (!fileDataArray || fileDataArray.length === 0) {
         console.log("No data returned from database");
         return [];
       }
 
-      return fileDataArray;
+      for (const data of fileDataArray) {
+
+        if (data.file_name?.endsWith('.xlsx') || data.fileType?.includes('spreadsheet')) {
+          const success = await StudentDataExtractor.processExcel(data.text, this.db);
+        }
+
+      }
 
     } catch (error) {
-      console.error('DataTransfer error:' ,error.message);
+      console.error('DataTransfer error:', error.message);
       throw error;
     } finally {
       await this.db.close();
     }
-    
+
   }
 
   async clearAllData() {
@@ -36,52 +43,6 @@ export class Connector {
       console.error(`Error clearing data: ${error.message}`);
     }
   }
-
-  async scanAndProcessFiles() {
-      try {
-
-        try {
-          await fs.access(this.studentExcelFolder);
-        } catch {
-          console.log(`📁 Creating folder: ${this.studentExcelFolder}`);
-          await fs.mkdir(this.studentExcelFolder, { recursive: true });
-          console.log(`ℹ️  Place your Excel files in: ${this.studentExcelFolder}`);
-          return false;
-        }
-  
-        const files = await fs.readdir(this.studentExcelFolder);
-        const excelFiles = files.filter(file => 
-          file.endsWith('.xlsx') || file.endsWith('.xls')
-        );
-  
-        if (excelFiles.length === 0) {
-          console.log(`⚠️  No Excel files found in: ${this.studentExcelFolder}`);
-          console.log(`ℹ️  Place your Excel files there and run again`);
-          return false;
-        }
-  
-        console.log(`\n📊 Found ${excelFiles.length} Excel file(s)`);
-        let totalProcessed = 0;
-  
-        for (const excelFile of excelFiles) {
-          const filePath = path.join(this.studentExcelFolder, excelFile);
-          console.log(`\n📄 Processing: ${excelFile}`);
-          
-          try {
-            const success = await StudentDataExtractor.processExcel(filePath, this.db);
-            
-          } catch (error) {
-            console.error(`❌ Error processing ${excelFile}: ${error.message}`);
-          }
-        }
-  
-        return totalProcessed > 0;
-  
-      } catch (error) {
-        console.error(`❌ Error scanning files: ${error.message}`);
-        return false;
-      }
-    }
 
   async manualEntry(studentData = {}) {
 
@@ -126,3 +87,4 @@ export class Connector {
   }
 }
 
+export default Connector;
