@@ -1,4 +1,5 @@
-import { StudentDatabase, StudentDataExtractor } from './src/modules/main.js';
+import StudentDatabase from './src/modules/modules.StudentDatabase.js';
+import StudentDataExtractor from './src/modules/extractor/extractor.StudentData.js';
 import { StudentSchema } from './src/components/constructor.js';
 import retrieve_file from './src/modules/requestFile.js';
 
@@ -23,7 +24,6 @@ class Connector {
         if (data.file_name?.endsWith('.xlsx') || data.fileType?.includes('spreadsheet')) {
           const success = await StudentDataExtractor.processExcel(data.text, this.db);
         }
-
       }
 
     } catch (error) {

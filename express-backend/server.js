@@ -1,18 +1,12 @@
 import express from "express";
-import axios from "axios";
 import cors from "cors";
 import loginRoute from "./routes/loginRoute.js";
-<<<<<<< HEAD
 // import guestRoute from "./routes/guestRoute.js";
-import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
-import { connection , upload } from "./src/modules/connection.js";
-import cons from "./src/utils/cons.js";
-=======
+import { connection , upload } from "./src/modules/modules.connection.js";
 import fetchStudentRoute from "./routes/fetchStudentRoute.js";
 import registerRoute from "./routes/registerRoute.js";
 import refreshCollections from "./routes/refreshCollections.js";
 import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
->>>>>>> 42d377ca204755280e37b35d4ecd628b8cbdc012
 
 const app = express();
 
