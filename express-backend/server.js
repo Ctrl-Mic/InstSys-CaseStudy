@@ -2,10 +2,17 @@ import express from "express";
 import axios from "axios";
 import cors from "cors";
 import loginRoute from "./routes/loginRoute.js";
+<<<<<<< HEAD
 // import guestRoute from "./routes/guestRoute.js";
 import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
 import { connection , upload } from "./src/modules/connection.js";
 import cons from "./src/utils/cons.js";
+=======
+import fetchStudentRoute from "./routes/fetchStudentRoute.js";
+import registerRoute from "./routes/registerRoute.js";
+import refreshCollections from "./routes/refreshCollections.js";
+import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
+>>>>>>> 42d377ca204755280e37b35d4ecd628b8cbdc012
 
 const app = express();
 
@@ -28,8 +35,10 @@ app.get("/health", (req, res) => {
   console.log("Health check endpoint was called.");
 });
 
-app.use("/login", loginRoute);
-// app.use("/student/:student_id", guestRoute);
+app.use("/", loginRoute);
+app.use("/student", fetchStudentRoute);
+app.use("/", refreshCollections);
+app.use("/", registerRoute);
 
 // ✅ Example endpoint that talks to Python
 app.get("/v1/chat/prompt", async (req, res) => {
@@ -49,34 +58,5 @@ app.get("/v1/chat/prompt", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("✅ Server is running on port ${PORT}");
+  console.log(`✅ Server is running on port ${PORT}`);
 });
-
-app.post("/v1/upload/file", upload("file"), async (req, res) => {
-
-  try {
-
-    await connection();
-
-    const filePath = req.file
-    if (!filePath) {
-      res.status(400).json({ error: "No file uploaded" })
-    }
-
-    const file = {
-      file: file.buffer,
-      file_name: file.file_name,
-      fileType: fileSchema.mimetype,
-      uploadedAt: new Date(),
-    }
-
-    const result = await upload(file);
-    res.json("File uploaded successfully!")
-
-  } catch {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch data"});
-  }
-});
-
-app.post("/Register", )
