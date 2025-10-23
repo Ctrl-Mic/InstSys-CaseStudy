@@ -1,7 +1,8 @@
 import StudentDatabase from './src/modules/modules.StudentDatabase.js';
 import StudentDataExtractor from './src/modules/extractor/extractor.StudentData.js';
+import  NonTeaching from './src/modules/extractor/extractor.NonTeachingFaculty.js';
 import { StudentSchema } from './src/components/constructor.js';
-import retrieve_file from './src/modules/requestFile.js';
+import retrieve_file from './src/modules/.modules.requestFile.js';
 
 class Connector {
   constructor(connectionString = null) {
@@ -22,7 +23,13 @@ class Connector {
       for (const data of fileDataArray) {
 
         if (data.file_name?.endsWith('.xlsx') || data.fileType?.includes('spreadsheet')) {
-          const success = await StudentDataExtractor.processExcel(data.text, this.db);
+          for (const category of data.)
+            await NonTeachingFacultyExtractor.processNonTeachingFacultyExcel();
+          await StudentDataExtractor.processExcel(data.text, this.db);
+        }
+
+        if (data.file_name?.endsWith('pdf') || data.fileType?.includes('application/pdf')) {
+          
         }
       }
 

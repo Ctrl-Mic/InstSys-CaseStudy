@@ -16,6 +16,7 @@ export const fileSchema = new mongoose.Schema({
   fileType: { type: String, required: true },
   file: { type: Buffer, required: true },
   fileHash: { type: String, required: true, unique: true },
+  file_format: { type: String, require: true },
 })
 
 export const StudentSchema = {

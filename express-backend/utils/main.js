@@ -1017,7 +1017,7 @@ export class StudentGradesManager {
   }
 }
 
-class TeachingFacultyManager {
+export class TeachingFacultyManager {
   constructor(db) {
     this.db = db;
   }
@@ -1473,7 +1473,7 @@ async getTeachingPendingMedia() {
   }
 }
 
-class TeachingFacultyScheduleManager {
+export class TeachingFacultyScheduleManager {
   constructor(db) {
     this.db = db;
   }
@@ -1645,7 +1645,7 @@ class TeachingFacultyScheduleManager {
   }
 }
 
-class NonTeachingFacultyManager {
+export class NonTeachingFacultyManager {
   constructor(db) {
     this.db = db;
   }
@@ -2116,14 +2116,3 @@ async getNonTeachingPendingMedia() {
   }
 }
 
-module.exports = { 
-  StudentDatabase, 
-  StudentDataExtractor, 
-  CORScheduleManager,
-  StudentGradesManager,  
-  TeachingFacultyManager,
-  TeachingFacultyScheduleManager,
-  NonTeachingFacultyManager, 
-  FieldStatus, 
-  MediaDefaults 
-};

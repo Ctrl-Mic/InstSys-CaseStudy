@@ -110,7 +110,7 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
     formData.append("folder", folder.toLowerCase()); // ✅ send folder choice
 
     try {
-      let response = await fetch("http://127.0.0.1:5000/upload", {
+      let response = await fetch("http://127.0.0.1:5000/v1/upload/file", {
         method: "POST",
         body: formData,
       });
