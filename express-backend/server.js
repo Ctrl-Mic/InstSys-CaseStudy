@@ -54,45 +54,6 @@ app.get("/v1/chat/prompt", async (req, res) => {
   }
 });
 
-app.post("/v1/upload/file", async (req, res) => {
-  try {
-
-    await connection();
-
-    if (!req.file) {
-      res.status(400).json({ error: "No File Uploaded"});
-    }
-
-    const file = req.file;
-    const ext = path.extname()
-    const fileType = Filemeta.getFileType(path.basename);
-
-    const allowed = ['.xlsx', '.xls', '.pdf'];
-    if (!allowed.includes(ext)) {
-      return res.status(415).json({ error: 'Unsupported file type' });
-    }
-
-    const category = (req.body?.folder || req.body?.category || 'unknown').toString();
-
-    const buffer = await f.readfile(filePath);
-
-    const FilePayload = {
-      file_name: path.basename(filePath),
-      fileType: fileType,
-      file: buffer,
-      file_format: category,
-    }
-
-    const saved = await upload(FilePayload);
-
-    return res.status(201).json({ success: true, file: saved})
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch data" });
-  }
-});
-
 app.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
 });

@@ -1,12 +1,18 @@
 import StudentDatabase from './src/modules/modules.StudentDatabase.js';
 import StudentDataExtractor from './src/modules/extractor/extractor.StudentData.js';
-import  NonTeaching from './src/modules/extractor/extractor.NonTeachingFaculty.js';
+import NonTeachingFacultyExtractor from './src/modules/extractor/extractor.NonTeachingFaculty.js';
+import TeachingFacultyExtractor from './src/modules/extractor/extractor.TeachingFaculty.js';
+import CORExcelExtractor from './src/modules/extractor/extractor.COR.js';
 import { StudentSchema } from './src/components/constructor.js';
-import retrieve_file from './src/modules/.modules.requestFile.js';
+import retrieve_file from './src/modules/modules.requestFile.js';
 
 class Connector {
   constructor(connectionString = null) {
     this.db = new StudentDatabase(connectionString);
+
+    this.NonTeachingFacultyExtractor = new NonTeachingFacultyExtractor();
+    this.TeachingFacultyExtractor = new TeachingFacultyExtractor();
+    this.CORExcelExtractor = new CORExcelExtractor();
   }
 
   async DataTransfer() {
@@ -23,13 +29,10 @@ class Connector {
       for (const data of fileDataArray) {
 
         if (data.file_name?.endsWith('.xlsx') || data.fileType?.includes('spreadsheet')) {
-          for (const category of data.)
-            await NonTeachingFacultyExtractor.processNonTeachingFacultyExcel();
-          await StudentDataExtractor.processExcel(data.text, this.db);
-        }
-
-        if (data.file_name?.endsWith('pdf') || data.fileType?.includes('application/pdf')) {
-          
+          await this.NonTeachingFacultyExtractor.processNonTeachingFacultyExcel(data.text, data.file_name, this.db);
+          await this.TeachingFacultyExtractor.processTeachingFacultyExcel(data.text, data.file_name, this.db);
+          await this.CORExcelExtractor.processCORExcel(data.text, data.file_name, this.db);
+          await StudentDataExtractor.processExcel(data.text, data.file_name, this.db);
         }
       }
 

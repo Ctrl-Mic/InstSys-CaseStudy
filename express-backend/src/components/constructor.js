@@ -31,7 +31,7 @@ export const StudentSchema = {
   guardian_contact: { type: String, require: true },
 }
 
-export async function __defaultTest(corInfo) {
+export async function __defaultText(corInfo) {
 
   return `
   COR (Certificate of Registration) - Class Schedule
@@ -47,7 +47,7 @@ export async function __defaultTest(corInfo) {
 
 }
 
-export async function __test(course) {
+export async function __text(course) {
 
   return `Subject ${i + 1}:
   - Subject Code: ${course['Subject Code'] || 'N/A'}
