@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request, HTTPException#type: ignore
 from fastapi.responses import JSONResponse #type: ignore
 from utils.ai_core import AIAnalyst
 from src.config import Configuration
+from utils.ai_core.analyst import AIAnalyst
 
 app = FastAPI()
 app.add_middleware(
@@ -55,4 +56,4 @@ async def ChatPrompt(request: Request):
 
 if __name__ == "__main__":
     
-    uvicorn.run("entrypoint:app", port=5000, reload=True)
+    uvicorn.run("entrypoint:app", port=5001, reload=True)
