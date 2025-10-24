@@ -14,8 +14,8 @@ import { logMessage } from '../../utils/console.js';
   async extractCORExcelInfoSmart(sheet) {
     try {
       
-      const data = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: '' });      
-      const corInfo = this.extractCORUniversalScan(data, data.file_name);
+      const data = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      const corInfo = this.extractCORUniversalScan(data, data[1][1]);
       
       if (corInfo && corInfo.program_info.Program) {
         logMessage('✅ Universal COR extraction successful', this.log);
@@ -443,25 +443,30 @@ extractScheduleFlexible(data, startRow) {
   const courseUpper = String(courseCode).toUpperCase().trim();
   
   // Handle full program names FIRST (NEW!)
-  for (const { Keywords, code, matchAll} in programMap) {
-    const hasMatch = matchAll ? Keywords.every(kw => courseUpper.includes(kw)): Keywords.some(kw => courseUpper.includes(kw));
+  for (const { Keywords, code, matchAll } of programMap) {
+    const hasMatch = matchAll
+      ? Keywords.every(kw => courseUpper.includes(kw))
+      : Keywords.some(kw => courseUpper.includes(kw));
     if (hasMatch) return code;
   }
+
   
   // Check abbreviated codes
-  for (const [dept, courses] of Object.entries(this.knownCourses)) {
+  for (const [dept, courses] of Object.entries(__knownCourses)) {
     if (courses.includes(courseUpper)) {
       return dept;
     }
   }
   
   // Additional check for BS/AB prefix patterns (NEW!)
-  const courseUPPER = courses.toUpperCase().trim()
-  for (const entry in courseDepartmentMap) {
-    if ( entry.prefixes.some(prefix => courseUPPER.startsWith(prefix))) {
+  const courseUPPER = String(courseCode).toUpperCase().trim();
+
+  for (const entry of courseDepartmentMap) {
+    if (entry.prefixes.some(prefix => courseUPPER.startsWith(prefix))) {
       return entry.department;
     }
   }
+
   
   return 'UNKNOWN';
 }
@@ -475,9 +480,13 @@ extractScheduleFlexible(data, startRow) {
       logMessage('❌ Could not extract COR data from Excel', this.log);
       return null;
     }
-    
+
     const formattedText = this.formatCORInfoEnhanced(corInfo);
-    const metadata = CORmetadataSchema(corInfo, filename);
+    const subjectCodesList = corInfo.schedule
+      .map(course => course['Subject Code'])
+      .filter(code => code);
+    const subjectCodesString = subjectCodesList.join(', ');
+    const metadata = CORmetadataSchema(corInfo, filename, subjectCodesString, this.detectDepartmentFromCourse);
         
     return { cor_info: corInfo, formatted_text: formattedText, metadata: metadata };
     

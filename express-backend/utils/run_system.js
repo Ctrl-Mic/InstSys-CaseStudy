@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join} from 'path';
 import QueryAssistant from'./query_assistant.js';
-import { StudentDatabase, StudentDataExtractor, CORScheduleManager, StudentGradesManager } from './main.js';
+import { StudentDatabase, StudentDataExtractor, CORScheduleManager, StudentGradesManager, TeachingFacultyManager, TeachingFacultyScheduleManager, NonTeachingFacultyManager } from './main.js';
 import CORExcelExtractor from './cor_excel_extractor.js';
 
 class SchoolInformationSystem {

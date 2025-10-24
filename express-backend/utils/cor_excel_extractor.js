@@ -23,6 +23,9 @@ import { __courseNameMap } from  '../src/components/mapper.js'
   async extractCORExcelInfoSmart(filename) {
     try {
       // Read the entire Excel file without headers
+
+      console.log(`\n\n\n${filename}\n\n\n`)
+
       const workbook = xlsx.readFile(filename);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];

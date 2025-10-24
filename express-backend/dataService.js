@@ -30,9 +30,9 @@ class Connector {
 
         if (data.file_name?.endsWith('.xlsx') || data.fileType?.includes('spreadsheet')) {
           await this.NonTeachingFacultyExtractor.processNonTeachingFacultyExcel(data.text, data.file_name, this.db);
-          await this.TeachingFacultyExtractor.processTeachingFacultyExcel(data.text, data.file_name, this.db);
-          await this.CORExcelExtractor.processCORExcel(data.text, data.file_name, this.db);
-          await StudentDataExtractor.processExcel(data.text, data.file_name, this.db);
+          await this.TeachingFacultyExtractor.processTeachingFacultyExcel(data.text, this.db);
+          await this.CORExcelExtractor.processCORExcel(data.text, this.db);
+          await StudentDataExtractor.processExcel(data.text, this.db);
         }
       }
 

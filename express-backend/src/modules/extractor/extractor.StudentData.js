@@ -1,3 +1,5 @@
+import xlsx from 'xlsx';
+
 class StudentDataExtractor {
   static async processExcel(sheet, db) {
     try {

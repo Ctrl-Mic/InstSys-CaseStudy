@@ -60,7 +60,7 @@ export async function __text(course) {
   
 }
 
-export async function CORmetadataSchema(corInfo, filename) {
+export async function CORmetadataSchema(corInfo, filename, subjectCodesString, detectDepartmentFromCourse) {
   return {
     course: corInfo.program_info.Program,
     section: corInfo.program_info.Section,
@@ -70,9 +70,9 @@ export async function CORmetadataSchema(corInfo, filename) {
     subject_codes: subjectCodesString,
     total_units: String(corInfo.total_units || ''),
     subject_count: corInfo.schedule.length,
-    department: this.detectDepartmentFromCourse(corInfo.program_info.Program),
+    department: detectDepartmentFromCourse(corInfo.program_info.Program),
     created_at: new Date(),
-    source_file: path.basename(filename)
+    source_file: path.basename(String(filename))
   };
 }
 
