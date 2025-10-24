@@ -138,7 +138,9 @@ class AIAnalyst:
         self.debug(f"  -> Found {len(self.all_departments)} departments: {self.all_departments}")
         self.debug(f"  -> Found {len(self.all_programs)} programs: {self.all_programs}")
         self.debug(f"  -> Found {len(self.all_statuses)} statuses: {self.all_statuses}")
-        self.all_doc_types = self._get_unique_document_types() # <-- ADD THIS
+        self.all_doc_types = self._get_unique_document_types()
+        self.policy_engine = PolicyEngine(known_programs=self.all_programs)
+        self.training_system = TrainingSystem(mongo_db=self.mongo_db)
             
         self.dynamic_examples_collection = self.mongo_db["dynamic_examples"]
         # Ensure a text index exists for efficient searching. This command is idempotent and safe to run on startup.
@@ -2670,42 +2672,38 @@ class AIAnalyst:
 
             # In AI.py, inside the execute_reasoning_plan method:
 
-            if is_student_list_query and collected_docs:
-                self.debug("-> Consolidating de-duplicated student list into a single summary document.")
-                student_profiles_found = []
-                other_documents = []
+            # In analyst.py, inside execute_reasoning_plan...
 
-                for doc in collected_docs: # Use the de-duplicated list
-                    if "Guardian Name:" in doc.get("content", ""):
-                        student_profiles_found.append(doc)
-                    else:
-                        other_documents.append(doc)
+            # --- POLISHED & STRUCTURED GROUPING LOGIC ---
+            if len(collected_docs) > 5:
+                first_doc_meta = collected_docs[0].get("metadata", {})
+                # Check if the data is about students
+                is_student_data = "student_id" in first_doc_meta
 
-                if student_profiles_found:
-                    total_students = len(student_profiles_found)
-                    summary_header = f"Total Students Found: {total_students}\n"
+                if is_student_data:
+                    self.debug(f"-> Student result set ({len(collected_docs)} docs) detected. Restructuring into groups.")
                     
-                    student_list_items = []
-                    for i, student_doc in enumerate(student_profiles_found, 1):
-                        meta = student_doc.get("metadata", {})
-                        name = meta.get('full_name', 'N/A')
-                        student_id = meta.get('student_id', 'N/A')
-                        course = meta.get('course', 'N/A')
-                        year = meta.get('year_level', 'N/A')
-                        section = meta.get('section', 'N/A')
-                        
-                        list_item = f"{i}. Name: {name}, ID: {student_id}, Program: {course} {year}-{section}"
-                        student_list_items.append(list_item)
-                        
-                    final_content = summary_header + "\n".join(student_list_items)
+                    from collections import defaultdict
+                    grouped_students = defaultdict(list)
                     
-                    consolidated_document = {
-                        "source_collection": "student_list_summary",
-                        "content": final_content,
-                        "metadata": { "status": "success", "total_found": total_students, "query_type": "student_list" }
-                    }
+                    # Group the full, original document objects by their course, year, and section
+                    for doc in collected_docs:
+                        meta = doc.get("metadata", {})
+                        course = meta.get("course", "N/A")
+                        year = meta.get("year", "N/A")
+                        section = meta.get("section", "N/A")
+                        group_key = f"{course} - Year {year} - Section {section}"
+                        # Append the whole document to the group, preserving all data
+                        grouped_students[group_key].append(doc)
                     
-                    collected_docs = [consolidated_document] + other_documents
+                    # Create a new list of structured group objects for the AI
+                    grouped_data = []
+                    for group_name, docs in sorted(grouped_students.items()):
+                        grouped_data.append({
+                            "source_collection": "grouped_students",
+                            "group_name": group_name,
+                            "students": docs  # This key holds a list of the full student documents
+                        })
 
                     # Replace the flat list of documents with our new list of structured groups
                     collected_docs = grouped_data
