@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import bcrypt from "bcrypt";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -7,23 +8,32 @@ const __dirname = path.dirname(__filename);
 const __outdirname = path.dirname(__dirname);
 
 // ======== Database Path ========
-const BASE_DIR = path.join(__outdirname);
-const DB_FILE = path.join(BASE_DIR, "../express-backend/src/accounts/students.json");
+const DB_FILE = path.resolve(__outdirname, "src/accounts/students.json");
+
+// ======== Security Config ========
+const SALT_ROUNDS = 10;
+
+// Utility: detect if a string looks like a bcrypt hash
+const isBcryptHash = (value) => typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
 
 // ======== File I/O Helpers ========
 export function loadStudents() {
-    console.log("Loading students from DB_FILE:", DB_FILE);
   if (!fs.existsSync(DB_FILE)) {
-    console.log("DB_FILE does not exist, returning empty object");
-    return {}
-  };
-  const data = fs.readFileSync(DB_FILE, "utf-8");
-  console.log("Students data loaded:", data);
-  return JSON.parse(data);
+    return {};
+  }
+  const raw = fs.readFileSync(DB_FILE, "utf-8");
+  try {
+    const parsed = JSON.parse(raw);
+    // Ensure we always return an object for keyed access
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 export function saveStudents(students) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(students, null, 2), "utf-8");
+  const content = JSON.stringify(students ?? {}, null, 2);
+  fs.writeFileSync(DB_FILE, content, "utf-8");
 }
 
 // ======== RBAC Core ========
@@ -52,32 +62,26 @@ export function createStudentAccount({
   email,
   role = null
 }) {
-  console.log("Creating student account for ID:", studentId);
   const students = loadStudents();
 
   if (students[studentId]) {
-    console.log("Student ID already exists");
     return { error: "Student ID already exists" };
   }
 
-  const hashedPassword = password;
-  const encryptedName = `${firstName} ${middleName} ${lastName}`;
-  const encryptedYear = year;
-  const encryptedCourse = course;
-  const encryptedEmail = email;
+  // Hash password with bcrypt
+  const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS);
+  const fullName = [firstName, middleName, lastName].filter(Boolean).join(" ");
 
   const assignedRole = role || getRoleFromCourse(course);
 
   students[studentId] = {
-    studentName: encryptedName,
-    year: encryptedYear,
-    course: encryptedCourse,
-    email: encryptedEmail,
+    studentName: fullName,
+    year,
+    course,
+    email,
     password: hashedPassword,
     role: assignedRole,
   };
-
-  console.log("New student data:", students[studentId]);
   saveStudents(students);
 
   return {
@@ -87,12 +91,73 @@ export function createStudentAccount({
   };
 }
 
+// Build a document matching src/components/constructor.js userSchema
+export function buildConstructorUserDoc({
+  studentId,
+  fullName,
+  year,
+  course,
+  email,
+  hashedPassword,
+  role,
+}) {
+  return {
+    _id: studentId,
+    student_name: fullName,
+    year,
+    course,
+    email,
+    password: hashedPassword,
+    role,
+  };
+}
+
+// Convenience helper: get a constructor-shaped doc for an existing studentId
+export function getConstructorUserDoc(studentId) {
+  const students = loadStudents();
+  const rec = students[studentId];
+  if (!rec) return null;
+  const fullName = rec.studentName;
+  return buildConstructorUserDoc({
+    studentId,
+    fullName,
+    year: rec.year,
+    course: rec.course,
+    email: rec.email,
+    hashedPassword: rec.password,
+    role: rec.role,
+  });
+}
+
 // ======== Password Verification ========
 export function verifyPassword(studentId, password) {
   const students = loadStudents();
-  if (!students[studentId]) return false;
-  if (students[studentId].password === password) return true;
-  
+  const record = students[studentId];
+  if (!record || !record.password) return false;
+
+  const stored = record.password;
+  // If it's a bcrypt hash, compare securely
+  if (isBcryptHash(stored)) {
+    try {
+      return bcrypt.compareSync(password, stored);
+    } catch {
+      return false;
+    }
+  }
+
+  // Fallback for legacy plaintext passwords. If it matches, upgrade to bcrypt.
+  if (stored === password) {
+    try {
+      const newHash = bcrypt.hashSync(password, SALT_ROUNDS);
+      students[studentId].password = newHash;
+      saveStudents(students);
+    } catch {
+      // ignore upgrade failure; still allow login this time
+    }
+    return true;
+  }
+
+  return false;
 }
 
 // ======== Student Info ========
@@ -103,9 +168,9 @@ export function getStudentInfo(studentId) {
   const student = students[studentId];
   return {
     studentId,
-    studentName: decryptData(student.studentName),
-    year: decryptData(student.year),
-    course: decryptData(student.course),
+    studentName: student.studentName,
+    year: student.year,
+    course: student.course,
     role: student.role,
   };
 }
@@ -124,25 +189,26 @@ export function getAllStudents(requestingUserId) {
 
   return Object.entries(students).map(([sid, data]) => ({
     studentId: sid,
-    studentName: decryptData(data.studentName),
-    year: decryptData(data.year),
-    course: decryptData(data.course),
+    studentName: data.studentName,
+    year: data.year,
+    course: data.course,
     role: data.role,
   }));
 }
 
 export function mapStudentRole(studentRole) {
   const roleMap = {
-    "student CS": ("teaching_faculty", ["BSCS"]),
-    "student IT": ("teaching_faculty", ["BSIT"]),
-    "student HM": ("teaching_faculty", ["BSHM"]),
-    "student TM": ("teaching_faculty", ["BSTM"]),
-    "student OAd": ("teaching_faculty", ["BSOAd"]),
-    "student ECED": ("teaching_faculty", ["BECEd"]),
-    "student TLEd": ("teaching_faculty", ["BTLEd"]),
-    "faculty": ("Faculty", ["Faculty"]),
-    "Guest": ("Guest", ["Guest"]),
-    "student": ("Student", []), //fallback
-  }
-    return roleMap[studentRole] || { role: "student", assign: [""] };
+    "student CS": { role: "Teaching_Faculty", assign: ["BSCS"] },
+    "student IT": { role: "Teaching_Faculty", assign: ["BSIT"] },
+    "student HM": { role: "Teaching_Faculty", assign: ["BSHM"] },
+    "student TM": { role: "Teaching_Faculty", assign: ["BSTM"] },
+    "student OAd": { role: "Teaching_Faculty", assign: ["BSOAd"] },
+    "student ECEd": { role: "Teaching_Faculty", assign: ["BECEd"] },
+    "student TLEd": { role: "Teaching_Faculty", assign: ["BTLEd"] },
+    "faculty": { role: "Faculty", assign: ["Faculty"] },
+    "Guest": { role: "Guest", assign: ["Guest"] },
+    "student": { role: "Student", assign: [] }, // fallback
+    "admin": { role: "Admin", assign: [""] },
+  };
+  return roleMap[studentRole] || { role: "Student", assign: [] };
 };
