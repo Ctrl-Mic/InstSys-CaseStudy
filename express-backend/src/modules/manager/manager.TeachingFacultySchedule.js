@@ -1,4 +1,4 @@
-export class TeachingFacultyScheduleManager {
+class TeachingFacultyScheduleManager {
   constructor(db) {
     this.db = db;
   }
@@ -169,3 +169,5 @@ export class TeachingFacultyScheduleManager {
     }
   }
 }
+
+export default TeachingFacultyScheduleManager;
