@@ -11,6 +11,8 @@ import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
 import f from 'fs';
 import Filemeta from './src/utils/cons.js'
 import path from "path";
+import multer from 'multer';
+const memoryUpload = multer({ storage: multer.memoryStorage() });
 
 const app = express();
 
@@ -57,6 +59,56 @@ app.post("/v1/chat/prompt", async (req, res) => {
   }
 });
 
+app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
+    try {
+      await connection();
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded (use field name 'file')" });
+      }
+
+      const { originalname, buffer } = req.file;
+      const ext = path.extname(originalname).toLowerCase();
+
+      const fileType =
+        typeof Filemeta.getFileType === "function"
+          ? Filemeta.getFileType(ext)
+          : new Filemeta().getFileType(ext);
+
+      const allowed = [".xlsx", ".xls", ".pdf"];
+      if (!allowed.includes(ext)) {
+        return res.status(415).json({ error: "Unsupported file type" });
+      }
+
+      const folder = (req.body?.folder || req.body?.category || "unknown").toString();
+      const overwrite = (req.body?.overwrite === "true") || false;
+
+      const filePayload = {
+        file_name: originalname,
+        fileType,
+        file: buffer,              // Buffer will be stored in MongoDB
+        file_format: folder,
+        overwrite
+      };
+
+      const saved = await upload(filePayload);
+
+      if (!saved) {
+        return res.status(500).json({ success: false, error: "Upload failed" });
+      }
+
+      if (saved.status === 409) {
+        return res.status(409).json(saved);
+      }
+
+      return res.status(201).json({ success: true, file: saved });
+    } catch (error) {
+      console.error("Upload error:", error);
+      return res.status(500).json({ error: "Failed to upload file" });
+    }
+  }
+);
+
 (async () => {
   try {
     console.log("🧠 Initializing AI Analyst via Python API...");
@@ -70,4 +122,3 @@ app.post("/v1/chat/prompt", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
 });
-
