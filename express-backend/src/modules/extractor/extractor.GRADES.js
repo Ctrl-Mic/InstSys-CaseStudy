@@ -5,7 +5,7 @@ import { logMessage } from '../../utils/console.js';
 import { __fieldMappings } from '../../components/mapper.js';
 import { GRADEmetadataSchema } from '../../components/constructor.js';
 
-export class StudentGradesExtractor {
+class StudentGradesExtractor {
   constructor(log = false) {
     this.validGradeStatuses = validGradeStatuses;
     this.log = log;
@@ -30,7 +30,7 @@ export class StudentGradesExtractor {
   isStudentGradesExcel(data) {
     try {
       let firstRowsText = '';
-      
+
       for (let i = 0; i < Math.min(20, data.length); i++) {
         for (let j = 0; j < data[i].length; j++) {
           if (data[i][j]) {
@@ -69,10 +69,10 @@ export class StudentGradesExtractor {
     // Search first 20 rows
     for (let i = 0; i < Math.min(20, data.length); i++) {
       const row = data[i] || [];
-      
+
       for (let j = 0; j < Math.min(row.length, 10); j++) {
         if (!row[j]) continue;
-        
+
         const cellValue = String(row[j]).trim();
         const cellUpper = cellValue.toUpperCase();
 
@@ -194,7 +194,7 @@ export class StudentGradesExtractor {
     let headerRow = -1;
     const columnMapping = {};
 
-    const fieldMappings = __fieldMappings 
+    const fieldMappings = __fieldMappings
 
     // Find header row
     for (let i = 0; i < Math.min(15, data.length); i++) {
@@ -257,7 +257,7 @@ export class StudentGradesExtractor {
     // Extract grade records
     for (let i = headerRow + 1; i < data.length; i++) {
       const row = data[i] || [];
-      
+
       // Skip empty rows
       if (row.every(cell => !cell)) continue;
 
@@ -326,8 +326,8 @@ export class StudentGradesExtractor {
     for (const pattern of patterns) {
       const match = filenameUpper.match(pattern);
       if (match) {
-        return match[0].startsWith('BS') || match[0].startsWith('AB') 
-          ? match[0] 
+        return match[0].startsWith('BS') || match[0].startsWith('AB')
+          ? match[0]
           : `BS${match[1]}`;
       }
     }
@@ -382,24 +382,26 @@ export class StudentGradesExtractor {
 
   //Process student grades Excel and return structured data
   async processStudentGradesExcel(data) {
-  try {
-    const gradesInfo = await this.extractStudentGradesExcelInfo(data);
+    try {
+      const gradesInfo = await this.extractStudentGradesExcelInfo(data);
 
-    if (!gradesInfo || !gradesInfo.student_info.student_number) {
-      logMessage('❌ Could not extract student grades data', this.log);
+      if (!gradesInfo || !gradesInfo.student_info.student_number) {
+        logMessage('❌ Could not extract student grades data', this.log);
+        return null;
+      }
+
+      const metadata = GRADEmetadataSchema(gradesInfo, filename);
+
+      return {
+        grades_info: gradesInfo,
+        metadata: metadata
+      };
+
+    } catch (error) {
+      console.error(`❌ Error processing student grades: ${error.message}`);
       return null;
     }
-
-    const metadata = GRADEmetadataSchema(gradesInfo, filename);
-
-    return {
-      grades_info: gradesInfo,
-      metadata: metadata
-    };
-
-  } catch (error) {
-    console.error(`❌ Error processing student grades: ${error.message}`);
-    return null;
   }
 }
-}
+
+export default StudentGradesExtractor;
