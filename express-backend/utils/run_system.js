@@ -1,24 +1,27 @@
 // run_system.js
-const readline = require('readline');
-const path = require('path');
-const fs = require('fs').promises;
-const QueryAssistant = require('./query_assistant');
-const { StudentDatabase, StudentDataExtractor, CORScheduleManager, StudentGradesManager, TeachingFacultyManager, TeachingFacultyScheduleManager, NonTeachingFacultyManager } = require('./main');
-const CORExcelExtractor = require('./cor_excel_extractor');
+import readline from 'readline';
+import fs from 'fs/promises';
+import { fileURLToPath } from 'url';
+import { dirname, join} from 'path';
+import QueryAssistant from'./query_assistant.js';
+import { StudentDatabase, StudentDataExtractor, CORScheduleManager, StudentGradesManager, TeachingFacultyManager, TeachingFacultyScheduleManager, NonTeachingFacultyManager } from './main.js';
+import CORExcelExtractor from './cor_excel_extractor.js';
 
 class SchoolInformationSystem {
   constructor(connectionString = null) {
     this.db = new StudentDatabase(connectionString);
     
     // Paths relative to utils folder
-    this.basePath = path.join(__dirname, 'uploaded_files');
-    this.studentExcelFolder = path.join(this.basePath, 'student_list_excel');
-    this.corExcelFolder = path.join(this.basePath, 'cor_excel');
-    this.gradesExcelFolder = path.join(this.basePath, 'student_grades_excel');
-    this.teachingFacultyExcelFolder = path.join(this.basePath, 'teaching_faculty_excel');
-    this.teachingFacultySchedExcelFolder = path.join(this.basePath, 'teaching_faculty_sched_excel');
-    this.nonTeachingFacultyExcelFolder = path.join(this.basePath, 'non_teaching_faculty_excel');
-    this.processedFolder = path.join(this.basePath, 'processed');
+    // this.filename = fileURLToPath(import.meta.url);
+    // this.__dirname = path.dirname(filename);
+    const filename = fileURLToPath(import.meta.url);
+    const dirname1 = dirname(filename);
+    this.basePath = process.env.FILE_STORAGE_PATH || join(dirname1, 'uploaded_files');
+    // this.basePath = join(__dirname, 'uploaded_files');
+    this.studentExcelFolder = join(this.basePath, 'student_list_excel');
+    this.corExcelFolder = join(this.basePath, 'cor_excel');
+    this.gradesExcelFolder = join(this.basePath, 'student_grades_excel');
+    this.processedFolder = join(this.basePath, 'processed');
     
     // Extractors and managers
     this.corExtractor = new CORExcelExtractor();
@@ -75,7 +78,7 @@ class SchoolInformationSystem {
       console.log(`\n📊 Found ${studentExcelFiles.length} student Excel file(s)`);
       
       for (const file of studentExcelFiles) {
-        const filePath = path.join(this.studentExcelFolder, file);
+        const filePath = join(this.studentExcelFolder, file);
         console.log(`   Processing: ${file}`);
         
         try {
@@ -110,7 +113,7 @@ class SchoolInformationSystem {
       console.log(`\n📚 Found ${corExcelFiles.length} COR Excel file(s)`);
       
       for (const file of corExcelFiles) {
-        const filePath = path.join(this.corExcelFolder, file);
+        const filePath = join(this.corExcelFolder, file);
         console.log(`   Processing: ${file}`);
         
         try {
@@ -152,7 +155,7 @@ class SchoolInformationSystem {
       let gradesSkipped = 0;
       
       for (const file of gradesExcelFiles) {
-        const filePath = path.join(this.gradesExcelFolder, file);
+        const filePath = join(this.gradesExcelFolder, file);
         console.log(`   Processing: ${file}`);
         
         try {
@@ -490,7 +493,7 @@ async clearAllCORSchedules() {
       let totalProcessed = 0;
 
       for (const excelFile of excelFiles) {
-        const filePath = path.join(this.studentExcelFolder, excelFile);
+        const filePath = join(this.studentExcelFolder, excelFile);
         console.log(`\n📄 Processing: ${excelFile}`);
         
         try {
@@ -1423,7 +1426,7 @@ async viewTeachingFacultySchedules() {
   console.log('🐛 DEBUG COR EXCEL FILE');
   console.log('='.repeat(60));
 
-  const corFolder = path.join(__dirname, 'uploaded_files', 'cor_excel');
+  const corFolder = join(__dirname, 'uploaded_files', 'cor_excel');
   const files = await fs.readdir(corFolder);
   const excelFiles = files.filter(file => file.endsWith('.xlsx') || file.endsWith('.xls'));
 
@@ -1445,7 +1448,7 @@ async viewTeachingFacultySchedules() {
     return;
   }
 
-  const filePath = path.join(corFolder, excelFiles[fileIndex]);
+  const filePath = join(corFolder, excelFiles[fileIndex]);
   
   // Read Excel
   const xlsx = require('xlsx');
@@ -1731,8 +1734,6 @@ process.on('SIGINT', async () => {
 });
 
 // Run if executed directly
-if (require.main === module) {
-  main();
-}
+main();
 
-module.exports = SchoolInformationSystem;
+export default SchoolInformationSystem;

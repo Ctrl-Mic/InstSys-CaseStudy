@@ -1,8 +1,8 @@
 // student_grades_extractor.js
-const xlsx = require('xlsx');
-const path = require('path');
+import xlsx from 'xlsx';
+import path from 'path';
 
-class StudentGradesExtractor {
+export class StudentGradesExtractor {
   constructor() {
     this.validGradeStatuses = ['PASSED', 'FAILED', 'INCOMPLETE', 'DROPPED', 'WITHDREW', 'INC', 'DRP', 'P', 'F'];
   }
@@ -463,5 +463,3 @@ class StudentGradesExtractor {
   }
 }
 }
-
-module.exports = StudentGradesExtractor;

@@ -34,4 +34,5 @@ export async function configPythonAPI(collection) {
     console.error("Error sending collection:", error.message, "from Python API");
     throw error;
   }
+  
 }

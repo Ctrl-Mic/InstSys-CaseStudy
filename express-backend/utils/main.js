@@ -1,8 +1,8 @@
 // studentDatabase.js
-const { MongoClient } = require('mongodb');
-const xlsx = require('xlsx');
-const fs = require('fs').promises;
-const path = require('path');
+import { MongoClient }  from 'mongodb';
+import xlsx from'xlsx';
+import fs from 'fs/promises';
+import path from 'path';
 
 // Field Status Enum
 const FieldStatus = {
@@ -24,7 +24,7 @@ const MediaDefaults = {
   }
 };
 
-class StudentDatabase {
+export class StudentDatabase {
   constructor(connectionString = null, databaseName = 'school_system') {
   this.connectionString = connectionString || 'mongodb://localhost:27017/';
   this.databaseName = databaseName;
@@ -45,9 +45,11 @@ class StudentDatabase {
 
   async connect() {
   try {
+    console.log("test1");
     this.client = new MongoClient(this.connectionString, {
       serverSelectionTimeoutMS: 5000
     });
+    console.log("test2");
 
     await this.client.connect();
     await this.client.db().admin().ping();
@@ -593,9 +595,10 @@ async getDepartmentStatistics(department) {
   }
 }
 
-class StudentDataExtractor {
+export class StudentDataExtractor {
   static async processExcel(filePath, db) {
     try {
+
       const workbook = xlsx.readFile(filePath);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -646,6 +649,8 @@ class StudentDataExtractor {
         }
 
         if (studentData.student_id || studentData.full_name) {
+
+          console.log(`testing the data: ${JSON.stringify(studentData, null, 2)}`);
           const result = await db.createStudentRecord(studentData, 'file_extraction');
           if (result) processedCount++;
         }
@@ -706,7 +711,7 @@ class StudentDataExtractor {
   }
 }
 
-class CORScheduleManager {
+export class CORScheduleManager {
   constructor(db) {
     this.db = db;
   }
@@ -880,7 +885,7 @@ async getCORSchedules(filters = {}) {
   }
 }
 
-class StudentGradesManager {
+export class StudentGradesManager {
   constructor(db) {
     this.db = db;
   }
@@ -1012,7 +1017,7 @@ class StudentGradesManager {
   }
 }
 
-class TeachingFacultyManager {
+export class TeachingFacultyManager {
   constructor(db) {
     this.db = db;
   }
@@ -1468,7 +1473,7 @@ async getTeachingPendingMedia() {
   }
 }
 
-class TeachingFacultyScheduleManager {
+export class TeachingFacultyScheduleManager {
   constructor(db) {
     this.db = db;
   }
@@ -1640,7 +1645,7 @@ class TeachingFacultyScheduleManager {
   }
 }
 
-class NonTeachingFacultyManager {
+export class NonTeachingFacultyManager {
   constructor(db) {
     this.db = db;
   }
@@ -2111,14 +2116,3 @@ async getNonTeachingPendingMedia() {
   }
 }
 
-module.exports = { 
-  StudentDatabase, 
-  StudentDataExtractor, 
-  CORScheduleManager,
-  StudentGradesManager,  
-  TeachingFacultyManager,
-  TeachingFacultyScheduleManager,
-  NonTeachingFacultyManager, 
-  FieldStatus, 
-  MediaDefaults 
-};

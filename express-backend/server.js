@@ -1,12 +1,16 @@
 import express from "express";
-import axios from "axios";
 import cors from "cors";
 import loginRoute from "./routes/loginRoute.js";
+// import guestRoute from "./routes/guestRoute.js";
+import { connection , upload } from "./src/modules/modules.connection.js";
 import fetchStudentRoute from "./routes/fetchStudentRoute.js";
 import registerRoute from "./routes/registerRoute.js";
 import refreshCollections from "./routes/refreshCollections.js";
 import coursesRoute from "./routes/coursesRoute.js";
 import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
+import f from 'fs';
+import Filemeta from './src/utils/cons.js'
+import path from "path";
 
 const app = express();
 
@@ -66,3 +70,4 @@ app.post("/v1/chat/prompt", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
 });
+

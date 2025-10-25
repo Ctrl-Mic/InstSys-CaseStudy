@@ -1,9 +1,9 @@
 // cor_excel_extractor.js
-const xlsx = require('xlsx');
-const path = require('path');
-const fs = require('fs').promises;
+import * as xlsx from 'xlsx';
+import path from 'path';
+import { __courseNameMap } from  '../src/components/mapper.js'
 
-class CORExcelExtractor {
+ class CORExcelExtractor {
   constructor() {
     // Department mapping
     this.knownCourses = {
@@ -23,6 +23,9 @@ class CORExcelExtractor {
   async extractCORExcelInfoSmart(filename) {
     try {
       // Read the entire Excel file without headers
+
+      console.log(`\n\n\n${filename}\n\n\n`)
+
       const workbook = xlsx.readFile(filename);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -109,7 +112,7 @@ class CORExcelExtractor {
         if (!programInfo.Program && (cellUpper.includes('PROGRAM') || cellUpper.includes('COURSE'))) {
           console.log(`   Found label at (${i},${j}): "${cellValue}"`);
           
-          // Try to get value from same cell (after colon)
+          // Try to get value from same cell (after colon)1
           const match = cellValue.match(/(?:PROGRAM|COURSE)\s*[:=]?\s*(.+)/i);
           if (match && match[1].trim()) {
             const value = match[1].trim();
@@ -282,30 +285,7 @@ class CORExcelExtractor {
   
   if (field === 'Program') {
     // Map full course names to codes (NEW!)
-    const courseNameMap = {
-      'BACHELOR OF SCIENCE IN COMPUTER SCIENCE': 'BSCS',
-      'BS COMPUTER SCIENCE': 'BSCS',
-      'COMPUTER SCIENCE': 'BSCS',
-      'BACHELOR OF SCIENCE IN INFORMATION TECHNOLOGY': 'BSIT',
-      'BS INFORMATION TECHNOLOGY': 'BSIT',
-      'INFORMATION TECHNOLOGY': 'BSIT',
-      'BACHELOR OF SCIENCE IN HOSPITALITY MANAGEMENT': 'BSHM',
-      'BS HOSPITALITY MANAGEMENT': 'BSHM',
-      'HOSPITALITY MANAGEMENT': 'BSHM',
-      'BACHELOR OF SCIENCE IN TOURISM MANAGEMENT': 'BSTM',
-      'BS TOURISM MANAGEMENT': 'BSTM',
-      'TOURISM MANAGEMENT': 'BSTM',
-      'BACHELOR OF SCIENCE IN BUSINESS ADMINISTRATION': 'BSBA',
-      'BS BUSINESS ADMINISTRATION': 'BSBA',
-      'BUSINESS ADMINISTRATION': 'BSBA',
-      'BACHELOR OF SCIENCE IN OFFICE ADMINISTRATION': 'BSOA',
-      'BS OFFICE ADMINISTRATION': 'BSOA',
-      'OFFICE ADMINISTRATION': 'BSOA',
-      'BACHELOR OF ELEMENTARY EDUCATION': 'BECED',
-      'ELEMENTARY EDUCATION': 'BECED',
-      'BACHELOR OF TECHNOLOGY AND LIVELIHOOD EDUCATION': 'BTLE',
-      'TECHNOLOGY AND LIVELIHOOD EDUCATION': 'BTLE'
-    };
+    const courseNameMap = __courseNameMap;
     
     const valueUpper = value.toUpperCase();
     
@@ -663,4 +643,4 @@ Subject ${i + 1}:
 }
 }
 
-module.exports = CORExcelExtractor;
+export default CORExcelExtractor;

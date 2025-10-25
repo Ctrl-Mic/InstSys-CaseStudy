@@ -1,14 +1,9 @@
-/**
- * Direct Excel File Processor
- * Process your existing Excel files from student_list_excel folder
- */
+import readline from 'readline';
+import path from 'path';
+import fs from 'fs/promises';
+import { StudentDatabase, StudentDataExtractor } from './main';
 
-const readline = require('readline');
-const path = require('path');
-const fs = require('fs').promises;
-const { StudentDatabase, StudentDataExtractor } = require('./main');
-
-class ExcelProcessor {
+export class ExcelProcessor {
   constructor() {
     // Create readline interface for user input
     this.rl = readline.createInterface({
@@ -298,4 +293,3 @@ if (require.main === module) {
   processor.run();
 }
 
-module.exports = ExcelProcessor;

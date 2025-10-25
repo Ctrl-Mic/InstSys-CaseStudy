@@ -49,7 +49,7 @@ async def ChatPrompt(request: Request):
         raise HTTPException(status_code=400, detail="Missing query")
     
     user_query = data['query']
-    final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query)
+    final_answer = ai_analyst.start_ai_analyst(user_query=user_query)
     return JSONResponse({"response": final_answer}, status_code=201)
 
 # ----------------------Route----------------------
