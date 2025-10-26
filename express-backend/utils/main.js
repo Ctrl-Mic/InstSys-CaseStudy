@@ -730,6 +730,7 @@ class CORScheduleManager {
       // Program Information
       course: corData.metadata.course,
       section: corData.metadata.section,
+      term: corData.metadata.term,
       year: corData.metadata.year,  // ← CHANGED from year_level
       adviser: corData.metadata.adviser,
       department: corData.metadata.department,
@@ -786,6 +787,9 @@ async getCORSchedules(filters = {}) {
     }
     if (filters.section) {
       query.section = filters.section;
+    }
+    if (filters.term) {
+      query.term = filters.term;
     }
 
     // If department filter is specified, search only that collection

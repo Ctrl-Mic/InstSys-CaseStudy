@@ -1868,7 +1868,7 @@ async viewTeachingFacultySchedules() {
       console.log('\n' + '='.repeat(60));
       console.log('📋 FULL SCHEDULE DETAILS');
       console.log('='.repeat(60));
-      console.log(`\n${selectedSchedule.course} - Year ${selectedSchedule.year_level} - Section ${selectedSchedule.section}`);
+      console.log(`\n${selectedSchedule.course} - Year ${selectedSchedule.year} - Section ${selectedSchedule.section}`);
       console.log(`Adviser: ${selectedSchedule.adviser || 'N/A'}\n`);
 
       selectedSchedule.subjects.forEach((subject, i) => {
@@ -1904,7 +1904,7 @@ async viewTeachingFacultySchedules() {
     console.log('='.repeat(60));
     console.log(`Source File: ${schedule.source_file}`);
     console.log(`Current Course: "${schedule.course}"`);
-    console.log(`Current Year: "${schedule.year_level}"`);
+    console.log(`Current Year: "${schedule.year}"`);
     console.log(`Current Section: "${schedule.section}"`);
     console.log(`Subject Count: ${schedule.subject_count}`);
     
@@ -1931,7 +1931,7 @@ async viewTeachingFacultySchedules() {
         
         // Update the schedule
         schedule.course = correctCourse;
-        schedule.year_level = correctYear;
+        schedule.year = correctYear;
         schedule.section = correctSection;
         schedule.department = correctDept;
         schedule.schedule_id = `COR_${correctDept}_${correctCourse}_Y${correctYear}_${correctSection}_${Date.now()}`;
@@ -2099,7 +2099,7 @@ async viewTeachingFacultySchedules() {
       // Update the schedule
       schedule.course = courseCode;
       schedule.department = correctDept;
-      schedule.schedule_id = `COR_${correctDept}_${courseCode}_Y${schedule.year_level}_${schedule.section}_${Date.now()}`;
+      schedule.schedule_id = `COR_${correctDept}_${courseCode}_Y${schedule.year}_${schedule.section}_${Date.now()}`;
       schedule.updated_at = new Date();
 
       // Insert into correct collection
