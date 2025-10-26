@@ -12,15 +12,21 @@
     "start:all": "concurrently \"vite --host\" \"cd ../backend && py -X utf8 entrypoint.py --host=0.0.0.0\""
   },
   "dependencies": {
+    "@echogarden/espeak-ng-emscripten": "^0.3.5",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.11",
+    "axios": "^1.12.2",
+    "elevenlabs": "^1.59.0",
+    "espeak-ng": "^1.0.2",
     "face-api.js": "^0.22.2",
     "framer-motion": "^12.23.24",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "simplex-noise": "^4.0.3",
     "tailwindcss": "^4.1.11",
+    "three": "^0.180.0",
     "vosk-browser": "^0.0.8",
     "vosk-js": "^0.3.0"
   },
