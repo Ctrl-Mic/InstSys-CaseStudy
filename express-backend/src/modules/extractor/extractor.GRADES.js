@@ -1,13 +1,12 @@
 import xlsx from 'xlsx';
 import path from 'path';
-import { __validGradeStatuses, __gradesIndicators, __fieldMappings } from './../../components/mapper/js'
+import { __validGradeStatuses, __gradesIndicators, __fieldMappings } from '../../components/mapper.js'
 import { logMessage } from '../../utils/console.js';
-import { __fieldMappings } from '../../components/mapper.js';
 import { GRADEmetadataSchema } from '../../components/constructor.js';
 
 class StudentGradesExtractor {
   constructor(log = false) {
-    this.validGradeStatuses = validGradeStatuses;
+    this.validGradeStatuses = __validGradeStatuses;
     this.log = log;
   }
 
