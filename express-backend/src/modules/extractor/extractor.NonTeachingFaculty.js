@@ -706,7 +706,7 @@ PhilHealth: ${formatField(philhealth)}`;
         phone: facultyInfo.phone || '',
         data_type: 'non_teaching_faculty',
         faculty_type: 'non_teaching',
-        source_file: path.basename(sheet.file_name),
+        source_file: sheet.file_name,
         created_at: new Date()
       };
 
