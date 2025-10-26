@@ -192,8 +192,8 @@ class SchoolInformationSystem {
       if (gradesExcelFiles.length > 0) {
         console.log(`\n📝 Found ${gradesExcelFiles.length} Grades Excel file(s)`);
         
-        const GradesExtractor = require('./grades_extractor');
-        const gradesExtractor = new GradesExtractor();
+        const StudentGradesExtractor = require('./student_grades_extractor');
+        const gradesExtractor = new StudentGradesExtractor();
         
         let gradesProcessed = 0;
         let gradesSkipped = 0;
@@ -203,12 +203,12 @@ class SchoolInformationSystem {
           console.log(`   Processing: ${file}`);
           
           try {
-            const gradesData = await gradesExtractor.processGradesExcel(filePath);
+            const gradesData = await gradesExtractor.extractStudentGradesExcelInfo(filePath);
             
-            if (gradesData) {
-              const result = await this.gradesManager.storeGrades(gradesData);
+            if (gradesData && gradesData.student_info) {
+              const result = await this.gradesManager.storeStudentGrades(gradesData);
               
-              if (result) {
+              if (result && result.success) {
                 totalProcessed++;
                 gradesProcessed++;
                 console.log(`   ✅ ${file}`);
@@ -319,7 +319,7 @@ class SchoolInformationSystem {
           console.log(`   Processing: ${file}`);
           
           try {
-            const schedData = await schedExtractor.processFacultyScheduleExcel(filePath);
+            const schedData = await schedExtractor.processTeachingFacultyScheduleExcel(filePath);
             
             if (schedData) {
               const result = await this.teachingFacultyScheduleManager.storeTeachingFacultySchedule(schedData);

@@ -890,7 +890,21 @@ class StudentGradesManager {
    */
   async storeStudentGrades(gradesData) {
   try {
-    const studentNumber = gradesData.metadata.student_number;
+    // Handle both data structures (metadata OR student_info)
+    const studentInfo = gradesData.metadata || gradesData.student_info;
+    const gradesInfo = gradesData.grades_info || gradesData;
+    
+    if (!studentInfo) {
+      console.error('❌ No student info found in grades data');
+      return { success: false, reason: 'no_student_info' };
+    }
+    
+    const studentNumber = studentInfo.student_number;
+    
+    if (!studentNumber) {
+      console.error('❌ No student number found in grades data');
+      return { success: false, reason: 'no_student_number' };
+    }
     
     // CRITICAL: Check if student exists first
     const existingStudent = await this.db.getStudentById(studentNumber);
@@ -909,22 +923,22 @@ class StudentGradesManager {
 
     const gradesDoc = {
       student_id: studentNumber,
-      student_name: gradesData.metadata.student_name,
+      student_name: studentInfo.student_name,
       full_name: existingStudent.full_name,
-      course: gradesData.metadata.course || existingStudent.course,
+      course: studentInfo.course || existingStudent.course,
       department: existingStudent.department,
-      year: existingStudent.year,  // ← CHANGED from year_level
+      year: existingStudent.year,
       section: existingStudent.section,
       
       // Grades data
-      gwa: gradesData.metadata.gwa,
-      total_subjects: gradesData.metadata.total_subjects,
-      grades: gradesData.grades_info.grades,
+      gwa: studentInfo.gwa,
+      total_subjects: studentInfo.total_subjects || (gradesInfo.grades ? gradesInfo.grades.length : 0),
+      grades: gradesInfo.grades || [],
       
       // Metadata
-      source_file: gradesData.metadata.source_file,
+      source_file: studentInfo.source_file || gradesData.source_file,
       data_type: 'student_grades',
-      created_at: gradesData.metadata.created_at,
+      created_at: studentInfo.created_at || new Date(),
       updated_at: new Date()
     };
 
