@@ -11,7 +11,7 @@ class NonTeachingFacultyManager {
     const dept = (facultyData.metadata.department || 'ADMIN_SUPPORT').toLowerCase();
     
     // Get the non-teaching faculty collection for this department
-    const collection = this.db.db.collection(`non_teaching_faculty_${dept}`);
+    const collection = this.db.collection(`non_teaching_faculty_${dept}`);
     
     const facultyDoc = {
       // Identification
@@ -191,7 +191,7 @@ async _addNonTeachingToPendingMedia(facultyDoc) {
       added_at: new Date()
     };
 
-    await this.db.db.collection('pending_media').updateOne(
+    await this.db.collection('pending_media').updateOne(
       { faculty_id: facultyDoc.faculty_id },
       { $set: pendingDoc },
       { upsert: true }
@@ -209,7 +209,7 @@ async _addNonTeachingToPendingMedia(facultyDoc) {
 async updateNonTeachingMedia(facultyId, mediaType, mediaData, filename, department) {
   try {
     const dept = department.toLowerCase();
-    const collection = this.db.db.collection(`non_teaching_faculty_${dept}`);
+    const collection = this.db.collection(`non_teaching_faculty_${dept}`);
 
     const updateData = {
       [`${mediaType}.data`]: mediaData,
@@ -246,7 +246,7 @@ async updateNonTeachingMedia(facultyId, mediaType, mediaData, filename, departme
 async updateNonTeachingDescriptor(facultyId, descriptor, department) {
   try {
     const dept = department.toLowerCase();
-    const collection = this.db.db.collection(`non_teaching_faculty_${dept}`);
+    const collection = this.db.collection(`non_teaching_faculty_${dept}`);
 
     const result = await collection.updateOne(
       { faculty_id: facultyId },
@@ -280,7 +280,7 @@ async updateNonTeachingDescriptor(facultyId, descriptor, department) {
 async _updateNonTeachingCompletion(facultyId, department) {
   try {
     const dept = department.toLowerCase();
-    const collection = this.db.db.collection(`non_teaching_faculty_${dept}`);
+    const collection = this.db.collection(`non_teaching_faculty_${dept}`);
     const faculty = await collection.findOne({ faculty_id: facultyId });
     
     if (!faculty) return;
@@ -316,7 +316,7 @@ async _updateNonTeachingCompletion(facultyId, department) {
 async _checkNonTeachingMediaComplete(facultyId, department) {
   try {
     const dept = department.toLowerCase();
-    const collection = this.db.db.collection(`non_teaching_faculty_${dept}`);
+    const collection = this.db.collection(`non_teaching_faculty_${dept}`);
     const faculty = await collection.findOne({ faculty_id: facultyId });
     
     if (!faculty) return;
@@ -326,7 +326,7 @@ async _checkNonTeachingMediaComplete(facultyId, department) {
     const descriptorComplete = !!faculty.descriptor;
 
     if (imageComplete && audioComplete && descriptorComplete) {
-      await this.db.db.collection('pending_media').deleteOne({ faculty_id: facultyId });
+      await this.db.collection('pending_media').deleteOne({ faculty_id: facultyId });
       console.log(`   🎉 Non-teaching faculty ${facultyId} completed all media requirements`);
     }
   } catch (error) {
@@ -339,7 +339,7 @@ async _checkNonTeachingMediaComplete(facultyId, department) {
  */
 async getNonTeachingPendingMedia() {
   try {
-    return await this.db.db.collection('pending_media').find({ 
+    return await this.db.collection('pending_media').find({ 
       faculty_type: 'non_teaching' 
     }).toArray();
   } catch (error) {
@@ -362,7 +362,7 @@ async getNonTeachingPendingMedia() {
 
       for (const dept of departments) {
         try {
-          const collection = this.db.db.collection(`non_teaching_faculty_${dept}`);
+          const collection = this.db.collection(`non_teaching_faculty_${dept}`);
           const faculty = await collection.find({ data_type: 'non_teaching_faculty' }).toArray();
           allFaculty.push(...faculty);
         } catch {
@@ -384,7 +384,7 @@ async getNonTeachingPendingMedia() {
   async getNonTeachingFacultyByDepartment(department) {
     try {
       const dept = department.toLowerCase();
-      const collection = this.db.db.collection(`non_teaching_faculty_${dept}`);
+      const collection = this.db.collection(`non_teaching_faculty_${dept}`);
       return await collection.find({ data_type: 'non_teaching_faculty' }).toArray();
     } catch (error) {
       console.error(`❌ Error getting non-teaching faculty: ${error.message}`);
@@ -433,7 +433,7 @@ async getNonTeachingPendingMedia() {
   async clearAllNonTeachingFaculty() {
     try {
       // Get ALL collections in the database
-      const collections = await this.db.db.listCollections().toArray();
+      const collections = await this.db.listCollections().toArray();
       
       let totalCleared = 0;
 
@@ -444,7 +444,7 @@ async getNonTeachingPendingMedia() {
         // Check if this is a non-teaching faculty collection
         if (collectionName.startsWith('non_teaching_faculty_')) {
           try {
-            const collection = this.db.db.collection(collectionName);
+            const collection = this.db.collection(collectionName);
             const result = await collection.deleteMany({ data_type: 'non_teaching_faculty' });
             
             if (result.deletedCount > 0) {
