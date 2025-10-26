@@ -156,7 +156,7 @@ function Login({ goRegister, goDashboard }) {
             className="login_panel flex flex-col backdrop-blur-sm gap-5 justify-center items-center w-[50%] h-fit py-[2.5vw] !rounded-3xl bg-white/60 shadow-[3px_3px_2px_#6a7282,_-2px_-2px_2px_#d1d5dc] border-white border-2">
             <h1 className="font-medium font-sans text-[clamp(2rem,5vw,4rem)]">Log In</h1>
             {/* Login Card */}
-            <motiondiv className="login_card w-full h-fit rounded-xl">
+            <motion.div className="login_card w-full h-fit rounded-xl">
               <div
                 className="flex flex-col gap-4 justify-center items-center px-10"
               >
@@ -218,7 +218,7 @@ function Login({ goRegister, goDashboard }) {
                   Sign-In as Guest
                 </button>
               </div>
-            </motiondiv>
+            </motion.div>
 
 
             {/* REGISTER BUTTON */}

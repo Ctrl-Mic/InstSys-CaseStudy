@@ -100,6 +100,7 @@ function Register({ goLogin }) {
 
       // Detect face descriptor
       const img = await faceapi.fetchImage(imageSrc);
+      console.log("Taking face descriptor")
       const detection = await faceapi
         .detectSingleFace(img)
         .withFaceLandmarks()
