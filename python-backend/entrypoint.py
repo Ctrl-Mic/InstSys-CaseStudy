@@ -2,7 +2,7 @@ import uvicorn #type: ignore
 from fastapi.middleware.cors import CORSMiddleware #type: ignore
 from fastapi import FastAPI, Request, HTTPException#type: ignore
 from fastapi.responses import JSONResponse #type: ignore
-from utils.ai_core import AIAnalyst
+# from utils.ai_core import AIAnalyst
 from src.config import Configuration
 from utils.ai_core.analyst import AIAnalyst
 
