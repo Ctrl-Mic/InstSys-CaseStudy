@@ -51,6 +51,7 @@ export default function CreatingAccount() {
 
         return () => clearInterval(interval);
     }, []);
+
   return (
     <div className="flex gap-5 w-full h-full p-20 relative">
       {/* Left content */}
