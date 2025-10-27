@@ -7,7 +7,8 @@ class Filemeta {
     }
   }
   
-   static getFileType(extesnsion) {
+   getFileType(extesnsion) {
+    if (!extesnsion) return 'application/octet-stream';
     return this.Filetype[extesnsion.toLowerCase()] || 'application/octet-stream';
   }
 

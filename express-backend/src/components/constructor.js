@@ -17,6 +17,7 @@ export const fileSchema = new mongoose.Schema({
   file: { type: Buffer, required: true },
   fileHash: { type: String, required: true, unique: true },
   file_format: { type: String, require: true },
+  file_category: {type: String, require: true},
 })
 
 export const StudentSchema = {
@@ -72,7 +73,7 @@ export async function CORmetadataSchema(corInfo, filename, subjectCodesString, d
     subject_count: corInfo.schedule.length,
     department: detectDepartmentFromCourse(corInfo.program_info.Program),
     created_at: new Date(),
-    source_file: path.basename(String(filename))
+    source_file: String(filename)
   };
 }
 
@@ -84,7 +85,7 @@ export async function GRADEmetadataSchema(gradesInfo, filename) {
     gwa: gradesInfo.student_info.gwa,
     total_subjects: gradesInfo.grades.length,
     data_type: 'student_grades',
-    source_file: path.basename(filename),
+    source_file: filename,
     created_at: new Date()
   };
 }

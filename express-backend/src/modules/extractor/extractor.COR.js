@@ -383,7 +383,7 @@ extractScheduleFlexible(data, startRow) {
     // Check if this looks like a subject code
     if (!/^[A-Z]{2,4}\s*\d{2,4}[A-Z]?$/i.test(firstCell)) continue;
     
-    const subject = __subject(firstCell, row, convertExcelTimeToReadable);
+    const subject = __subject(firstCell, row, this.convertExcelTimeToReadable);
     
     schedule.push(subject);
   }
