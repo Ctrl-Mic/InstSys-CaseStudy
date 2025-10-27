@@ -60,7 +60,8 @@ export function createStudentAccount({
   course,
   password,
   email,
-  role = null
+  faceDescriptor, // New field
+  imagePath, // New field
 }) {
   const students = loadStudents();
 
@@ -72,7 +73,7 @@ export function createStudentAccount({
   const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS);
   const fullName = [firstName, middleName, lastName].filter(Boolean).join(" ");
 
-  const assignedRole = role || getRoleFromCourse(course);
+  const assignedRole = getRoleFromCourse(course);
 
   students[studentId] = {
     studentName: fullName,
@@ -81,6 +82,8 @@ export function createStudentAccount({
     email,
     password: hashedPassword,
     role: assignedRole,
+    faceDescriptor, // Save face descriptor
+    imagePath, // Save image file path
   };
   saveStudents(students);
 

@@ -94,28 +94,56 @@ function Register({ goLogin }) {
     setFile(selectedFile);
 
     const reader = new FileReader();
-    reader.onload = async (e) => {
-      const imageSrc = e.target.result;
-      setPreview(imageSrc);
+reader.onload = async (e) => {
+  const imageSrc = e.target.result;
+  setPreview(imageSrc);
 
-      // Detect face descriptor
-      const img = await faceapi.fetchImage(imageSrc);
-      console.log("Taking face descriptor")
-      const detection = await faceapi
-        .detectSingleFace(img)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+  console.log("🟢 Starting face detection debug sequence...");
 
-      if (!detection) {
-        showPopup("error", "⚠️ No face detected in image. Please try again.");
-        setDescriptor(null);
-        return;
-      }
+  try {
+    // Step 1: Check model availability
+    console.log("🔍 Checking if models are loaded:", faceapi.nets);
 
-      setDescriptor(Array.from(detection.descriptor));
-      console.log("✅ Face detected, descriptor generated:", detection.descriptor);
-    };
-    reader.readAsDataURL(selectedFile);
+    // Step 2: Fetch the image
+    const img = await faceapi.fetchImage(imageSrc);
+    console.log("🖼️ Image fetched:", img.width, "x", img.height);
+
+    // Step 3: Confirm models
+    const modelsLoaded =
+      faceapi.nets.ssdMobilenetv1.params ||
+      faceapi.nets.tinyFaceDetector.params;
+    console.log("✅ Models loaded in memory:", !!modelsLoaded);
+
+    // Step 4: Try detection
+    console.log("⚙️ Running detectSingleFace...");
+    const detection = await faceapi
+      .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (!detection) {
+      console.warn("❌ No face detected! Possible reasons:");
+      console.warn("- Image might be too dark or small");
+      console.warn("- Face orientation may be off (sideways/tilted)");
+      console.warn("- Model path incorrect or not initialized");
+      showPopup("error", "⚠️ No face detected in image. Please try again.");
+      setDescriptor([0]); // Set descriptor to [0] instead of null for testing
+      return;
+    }
+
+    // Step 5: Output descriptor
+    console.log("✅ Face detected!");
+    console.log("🧩 Descriptor length:", detection.descriptor.length);
+    console.log("📊 Descriptor sample:", detection.descriptor.slice(0, 10));
+
+    setDescriptor(Array.from(detection.descriptor));
+  } catch (err) {
+    console.error("💥 Error during face detection:", err);
+    showPopup("error", "Detection failed: ${err.message}");
+  }
+};
+
+reader.readAsDataURL(selectedFile);
   };
 
   // ------------------------------
@@ -171,7 +199,7 @@ function Register({ goLogin }) {
     // Construct payload with FormData (Flask-compatible)
     const formData = new FormData();
     console.log(file);
-    formData.append("image", file);
+    formData.append("image", file); // new field added
     formData.append(
       "data",
       JSON.stringify({
@@ -183,7 +211,7 @@ function Register({ goLogin }) {
         course: form.course,
         year: form.year,
         email: form.email,
-        faceDescriptor: descriptor,
+        faceDescriptor: descriptor, //new field added
       })
     );
 
