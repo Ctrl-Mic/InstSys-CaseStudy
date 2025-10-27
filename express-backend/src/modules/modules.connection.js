@@ -1,8 +1,8 @@
-import { mongoose } from 'mongoose';
+import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { userSchema, fileSchema } from '../components/constructor.js';
 
-const url = "mongodb://localhost:27017/";
+const url = "mongodb://localhost:27017/school_system";
 
 export async function connection() {
   try {
@@ -16,20 +16,9 @@ export async function connection() {
     });
 
     console.log("Database connection successful");
-
+  
     const db = mongoose.connection.db;
 
-    const collections = ["StudentsData", "Grades", "COR", "Faculty", "NonFaculty"];
-
-    for (const name of collections) {
-      const existing = await db.listCollections({ name }).toArray();
-      if (existing.length === 0) {
-        await db.createCollection(name);
-        console.log(`Collection '${name}' created`);
-      } else {
-        console.log(`Collection '${name}' already exists`);
-      }
-    }
   } catch (err) {
     console.error("Database connection failed:", err.message);
   }

@@ -14,7 +14,7 @@ class StudentGradesExtractor {
     try {
 
       const data = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const studentInfo = this.extractGradesStudentMetadata(data, filename);
+      const studentInfo = this.extractGradesStudentMetadata(data, data.file_name);
       const gradesData = this.extractGradesRecords(data);
 
       return { student_info: studentInfo, grades: gradesData };
@@ -389,7 +389,7 @@ class StudentGradesExtractor {
         return null;
       }
 
-      const metadata = GRADEmetadataSchema(gradesInfo, filename);
+      const metadata = GRADEmetadataSchema(gradesInfo, data.file_name);
 
       return {
         grades_info: gradesInfo,

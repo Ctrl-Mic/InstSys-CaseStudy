@@ -26,15 +26,15 @@ const __TeachingFacultyManager = new TeachingFacultyManager(client.db);
 const __CORExcelExtractor = new CORExcelExtractor();
 const __CORScheduleManager = new CORScheduleManager(client.db);
 const __FacultySchedule = new TeachingFacultyScheduleExtractor();
-const __FacultyScheduleManager = new TeachingFacultyScheduleManager(client.db);
+const __FacultyScheduleManager = new TeachingFacultyScheduleManager(client);
 const __GradesExtractor = new StudentGradesExtractor();
-const __GradesManager = new StudentGradesManager(client.db);
+const __GradesManager = new StudentGradesManager(client);
 const __AdminExtractor = new AdminExtractor();
-const __AdminManager = new AdminManager(client.db);
+const __AdminManager = new AdminManager(client);
 const __CurriculumExtractor = new CurriculumExtractor();
-const __CurriculumManager = new CurriculumManager(client.db);
+const __CurriculumManager = new CurriculumManager(client);
 const __GeneralInfoExtractor = new GeneralInfoExtractor();
-const __GeneralInfoManager = new GeneralInfoManager(client.db);
+const __GeneralInfoManager = new GeneralInfoManager(client);
 
 const processors = {
   students_data: {

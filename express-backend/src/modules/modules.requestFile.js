@@ -87,6 +87,7 @@ export async function retrieve_file() {
         file_name: doc.file_name,
         fileType: doc.fileType,
         text: parsedData,
+        file_category: doc.file_category,
       });
     }
 

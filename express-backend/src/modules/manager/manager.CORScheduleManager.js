@@ -10,7 +10,7 @@ class CORScheduleManager {
     const dept = (corData.metadata.department || 'UNKNOWN').toLowerCase();
     
     // Get the schedules collection for this department
-    const collection = this.db.db.collection(`schedules_${dept}`);
+    const collection = this.db.collection(`schedules_${dept}`);
     
     const scheduleDoc = {
       // Identification
@@ -80,7 +80,7 @@ async getCORSchedules(filters = {}) {
     // If department filter is specified, search only that collection
     if (filters.department) {
       const dept = filters.department.toLowerCase();
-      const collection = this.db.db.collection(`schedules_${dept}`);
+      const collection = this.db.collection(`schedules_${dept}`);
       return await collection.find(query).toArray();
     }
 
@@ -90,7 +90,7 @@ async getCORSchedules(filters = {}) {
 
     for (const dept of departments) {
       try {
-        const collection = this.db.db.collection(`schedules_${dept}`);
+        const collection = this.db.collection(`schedules_${dept}`);
         const schedules = await collection.find(query).toArray();
         allSchedules.push(...schedules);
       } catch {
@@ -116,7 +116,7 @@ async getCORSchedules(filters = {}) {
 
       for (const dept of departments) {
         try {
-          const collection = this.db.db.collection(`schedules_${dept}`);
+          const collection = this.db.collection(`schedules_${dept}`);
           const schedules = await collection.find({ data_type: 'cor_schedule' }).toArray();
           allSchedules.push(...schedules);
         } catch {

@@ -23,7 +23,7 @@ class StudentGradesManager {
 
     // Store grades in the student's department collection
     const dept = (existingStudent.department || 'UNKNOWN').toLowerCase();
-    const collection = this.db.db.collection(`grades_${dept}`);
+    const collection = this.db.collection(`grades_${dept}`);
 
     const gradesDoc = {
       student_id: studentNumber,
@@ -76,7 +76,7 @@ class StudentGradesManager {
   async getStudentGrades(studentId, department = null) {
     try {
       if (department) {
-        const collection = this.db.db.collection(`grades_${department.toLowerCase()}`);
+        const collection = this.db.collection(`grades_${department.toLowerCase()}`);
         return await collection.findOne({ student_id: studentId });
       }
 
@@ -84,7 +84,7 @@ class StudentGradesManager {
       const departments = ['ccs', 'chtm', 'cba', 'cte', 'unknown'];
       for (const dept of departments) {
         try {
-          const collection = this.db.db.collection(`grades_${dept}`);
+          const collection = this.db.collection(`grades_${dept}`);
           const grades = await collection.findOne({ student_id: studentId });
           if (grades) return grades;
         } catch {
@@ -109,7 +109,7 @@ class StudentGradesManager {
 
       for (const dept of departments) {
         try {
-          const collection = this.db.db.collection(`grades_${dept}`);
+          const collection = this.db.collection(`grades_${dept}`);
           const result = await collection.deleteMany({ data_type: 'student_grades' });
           
           if (result.deletedCount > 0) {

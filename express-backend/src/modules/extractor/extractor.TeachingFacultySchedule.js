@@ -552,7 +552,7 @@ WEEKLY TEACHING SCHEDULE (${scheduleInfo.schedule?.length || 0} scheduled classe
         faculty_type: 'schedule',
         total_subjects: scheduleInfo.schedule.length,
         days_teaching: daysTeaching,
-        source_file: path.basename(filename),
+        source_file: filename,
         created_at: new Date()
       };
 

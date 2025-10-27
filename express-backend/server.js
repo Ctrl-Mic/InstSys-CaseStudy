@@ -8,7 +8,6 @@ import registerRoute from "./routes/registerRoute.js";
 import refreshCollections from "./routes/refreshCollections.js";
 import coursesRoute from "./routes/coursesRoute.js";
 import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
-import f from 'fs';
 import Filemeta from './src/utils/cons.js'
 import path from "path";
 import multer from 'multer';
@@ -80,14 +79,14 @@ app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
         return res.status(415).json({ error: "Unsupported file type" });
       }
 
-      const folder = (req.body?.folder || req.body?.category || "unknown").toString();
+      const category = req.body?.category.toString();
       const overwrite = (req.body?.overwrite === "true") || false;
 
       const filePayload = {
         file_name: originalname,
         fileType,
-        file: buffer,              // Buffer will be stored in MongoDB
-        file_format: folder,
+        file: buffer,             
+        file_category: category,
         overwrite
       };
 
