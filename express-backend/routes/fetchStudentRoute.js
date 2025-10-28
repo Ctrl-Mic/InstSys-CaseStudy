@@ -9,7 +9,8 @@ console.log("🔹 Fetch Student route initialized");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ACCOUNTS_DIR = path.join(__dirname, "..src/accounts");
+const __outdirname = path.dirname(__dirname);
+const ACCOUNTS_DIR = path.join(__outdirname, "src/config");
 
 // 🔹 GET /student/:student_id
 router.get("/:student_id", async (req, res) => {
@@ -36,9 +37,11 @@ router.get("/:student_id", async (req, res) => {
     // If still not found and the request is for the guest id, try guest.json
     if (!student && studentId === "PDM-0000-000000") {
       const guestFile = path.join(ACCOUNTS_DIR, "guest.json");
+      console.log("🔍 Looking for guest student data in:", guestFile);
       if (fs.existsSync(guestFile)) {
         const guestData = JSON.parse(fs.readFileSync(guestFile));
         student = guestData[studentId] ?? Object.values(guestData)[0];
+        console.log("✅ Guest student data loaded:", student);
       }
     }
     
@@ -46,7 +49,7 @@ router.get("/:student_id", async (req, res) => {
       console.log("❌ Student not found:", studentId);
       return res.status(404).json({ error: "Student not found" });
     }
-    // console.log("Decrypted student data (raw):", student);
+    console.log("Decrypted student data (raw):", student);
 
     // Decrypt and split name (guarding against undefined fields)
     const decryptedName = student.studentName;
@@ -79,7 +82,7 @@ router.get("/:student_id", async (req, res) => {
     // console.log("✅ Decrypted student data sent:", decryptedStudent);
   } catch (err) {
     res.status(500).json({ error: err.message });
-    console.error("❌ Error in guest route:", err);
+    console.error("❌ Error in fetch student route:", err);
   }
 });
 
