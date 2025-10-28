@@ -61,7 +61,7 @@ class AIAnalyst:
     """
     # In LLM_model.py, inside the AIAnalyst class:
 
-    def __init__(self, collections: List[str], llm_config: Optional[dict] = None, execution_mode: str = "split"):
+    def __init__(self, collections: List[str], llm_config: Optional[dict] = None, execution_mode: str = "offline"):
         """
         [MODIFIED] Initializes the AI Analyst with a MongoDB connection.
         """
