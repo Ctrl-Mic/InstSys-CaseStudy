@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import TypewriterText from "../utils/TypeWriter.jsx";
 import VoiceInput from "../utils/voiceInput.jsx";
+import Popup from "../utils/popups";
 import AudioVisualizer from "../utils/audioVisualizer.jsx";
 import { usePuter } from "../components/usePuter.js";
 import "../css/chatPrompt.css";
@@ -21,6 +22,20 @@ function AiChat({
   const [holoOn, setHoloOn] = useState(false);
   const [visualizerStream, setVisualizerStream] = useState(null);
   const puterSpeak = usePuter();
+
+  const [popup, setPopup] = useState({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const showPopup = (type, message) => {
+    setPopup({ show: true, type, message });
+    setTimeout(() => {
+      // 2 Second window timer for the pop-up
+      setPopup({ show: false, type: "", message: "" });
+    }, 2000);
+  };
 
   // ========================
   // Text-to-Speech Handling
@@ -72,6 +87,12 @@ function AiChat({
   // ========================
   return (
     <>
+      <Popup
+        show={popup.show}
+        type={popup.type}
+        message={popup.message}
+        onClose={() => setPopup({ show: false, type: "", message: "" })}
+      />
       {/* ======================
           MAIN CHAT LAYOUT
       ====================== */}
@@ -176,9 +197,20 @@ function AiChat({
                 <div className="w-full h-[70%] flex items-center">
                   {/* Holo Toggle */}
                   <button
-                    onClick={() => {
-                      toggleHolo();
-                      toggleMic();
+                    onClick={async () => {
+                      if (
+                        "webkitSpeechRecognition" in window ||
+                        "SpeechRecognition" in window
+                      ) {
+                        toggleHolo();
+                        toggleMic();
+                      } else {
+                        showPopup(
+                          "error",
+                          "Browser doesn't support this feature yet"
+                        );
+                        return;
+                      }
                     }}
                     className="mic rounded-full w-[2.5vw] h-[2.5vw] mr-1 aspect-square flex items-center justify-center cursor-pointer transition-transform transform-gpu duration-300 hover:scale-105 bg-gray-300 p-2 shadow-black/30 shadow-md"
                   >
