@@ -62,28 +62,12 @@ function Login({ goRegister, goDashboard }) {
   // =================================
   // Login Validation
   // =================================
-  const processLoginSuccess = async (data) => {
-    localStorage.setItem("studentId", data.studentId);
-    localStorage.setItem("role", data.role);
-    showPopup("success", "Login successful!");
-
-    fetch(`${EXPRESS_API}/refresh_collections`)
-      .then((res) => res.json())
-      .then(console.log("Collection Running"))
-      .catch(console.error);
-    await fetch(`${EXPRESS_API}/refresh_collections`, {
-      method: "POST",
-    });
-
-    goDashboard();
-  };
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (!form.studentId.trim() || !form.email.trim() || !form.password.trim()) {
+      showPopup("error", "All fields are required");
+      return;
+    }
     setError("");
     try {
       const res = await fetch(`${EXPRESS_API}/login`, {
@@ -105,6 +89,39 @@ function Login({ goRegister, goDashboard }) {
     }
   };
 
+  // =================================
+  // Login Processing and temporary data storing
+  // =================================
+  const processLoginSuccess = async (data) => {
+    localStorage.setItem("studentId", data.studentId);
+    localStorage.setItem("role", data.role);
+    showPopup("success", "Login successful!");
+
+    try {
+      console.log("Fetching Collections....");
+      const res = await fetch(`${EXPRESS_API}/refresh_collections`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to refresh collections: ${res.status}`);
+      }
+
+      const result = await res.json();
+      console.log("Refreshed Collections", result);
+
+      goDashboard();
+    } catch (err) {
+      console.error("❌ Error refreshing collections:", err);
+      showPopup("error", "Failed to refresh collections");
+    }
+  };
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
   const handleGuestLogin = async () => {
     const guestId = "PDM-0000-000000";
     try {
@@ -119,7 +136,7 @@ function Login({ goRegister, goDashboard }) {
       const guestRole = guestData.role || "Guest";
       console.log("guest result: ", guestData);
 
-      const res = await fetch("http://127.0.0.1:5000/login", {
+      const res = await fetch(`${EXPRESS_API}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
