@@ -19,9 +19,17 @@ console.log("server is starting...");
 
 const PORT = process.env.PORT || 5000;
 
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+
 app.use(
   cors({
-    origin: "http://localhost:5174", // allow your Vite frontend
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );

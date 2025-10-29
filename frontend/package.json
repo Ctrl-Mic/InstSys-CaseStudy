@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start:frontend": "npm run dev",
-    "start:all": "concurrently \"vite --host\" \"cd ../backend && py -X utf8 entrypoint.py --host=0.0.0.0\""
+    "start:express": "cd express-backend && npm run start:server",
+    "start:python": "cd python-backend && uvicorn entrypoint:app --port 5001 --reload",
+    "start:all": "concurrently \"npm run start:frontend\" \"npm run start:express\" \"npm run start:python\""
   },
   "dependencies": {
     "@echogarden/espeak-ng-emscripten": "^0.3.5",
