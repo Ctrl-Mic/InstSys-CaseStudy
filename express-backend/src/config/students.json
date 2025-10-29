@@ -1,11 +1,15 @@
 {
-  "PDM-2023-003183": {
-    "studentName": "Jhervin Agustin Mungcal",
+   "PDM-2023-003183": {
+    "studentName": "jhervin agustin mungcal",
     "year": "Third Year",
     "course": "Bachelor of Science in Computer Science (BSCS)",
     "email": "jhervinmungcal101@gmail.com",
-    "password": "123",
-    "role": "admin"
+    "password": "$2b$10$bpTs3zzPO07kS0gDn2JbQeOuzEuFigKiGbDNdNLo3SgM0CBoEcDfa",
+    "role": "admin",
+    "faceDescriptor": [
+      0
+    ],
+    "imagePath": "C:\\Users\\user\\Desktop\\Work\\InstSys-CaseStudy\\express-backend\\src\\uploads\\1761662624735-Avatar-guy-meme-7bv2j9.jpg"
   },
   "[object Object]": {
     "studentName": "undefined undefined undefined",

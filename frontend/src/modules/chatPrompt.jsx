@@ -12,22 +12,33 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
   const [input, setInput] = useState("");
   const boxRef = useRef(null);
   const [studentData, setStudentData] = useState(null);
+  const [loading, setLoading] = useState(true); // Add loading state
   const [activeView, setActiveView] = useState(initialView);
   const [aiText, setAiText] = useState("");
 
   useEffect(() => {
     const loggedInId = localStorage.getItem("studentId"); // save this in login
     if (loggedInId) {
+      setLoading(true); // Set loading to true before fetching
       fetch(`http://localhost:5000/student/${loggedInId}`)
         .then((res) => res.json())
         .then((data) => {
           if (!data.error) {
-            setStudentData(data); // store decrypted data
+            setStudentData(data); // Store decrypted data
+          } else {
+            setStudentData(null); // Handle error response
           }
         })
-        .catch((err) => console.error("Error fetching student:", err));
+        .catch((err) => {
+          console.error("Error fetching student:", err);
+          setStudentData(null); // Handle fetch error
+        })
+        .finally(() => {
+          setLoading(false); // Set loading to false after fetching
+        });
     } else {
       setStudentData(null); // Clear student data if no studentId found
+      setLoading(false); // No need to fetch, so loading is false
     }
   }, []);
 
@@ -148,7 +159,10 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
     // Scroll to the bottom of the chat box when messages change
     useEffect(() => {
       if (boxRef.current) {
-        boxRef.current.scrollTop = boxRef.current.scrollHeight;
+        boxRef.current.scrollTo({
+          top: boxRef.current.scrollHeight,
+          behavior: "smooth",
+        });
       }
     }, [messages]);
 
@@ -173,6 +187,17 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
       }),
     };
 
+    // Render loading state if data is still being fetched
+    if (loading) {
+      return <div>Loading...</div>;
+    }
+
+    // Render fallback if no student data is available
+    if (!studentData) {
+      return <div>No student data found. Please log in again.</div>;
+    }
+
+    // Render the main content when studentData is available
     return (
       <div className="chat-prompt w-full h-full p-0 m-0">
         <div className="mainContent flex h-full justify-center items-center">
@@ -332,9 +357,17 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
                 messages={messages}
                 input={input}
                 setInput={setInput}
-                handleSubmit={handleSubmit}
+                handleSubmit={(e) => {
+                  e.preventDefault();
+                  if (input.trim() === "") return;
+                  sendMessage(input);
+                  setInput("");
+                }}
                 boxRef={boxRef}
-                sendMessage={sendMessage}
+                sendMessage={(text) => {
+                  console.log("Sending message:", text);
+                  setMessages((prev) => [...prev, { sender: "user", text }]);
+                }}
                 response={aiText}
               />
             </div>

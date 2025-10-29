@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 const __outdirname = path.dirname(__dirname);
 
 // ======== Database Path ========
-const DB_FILE = path.resolve(__outdirname, "src/accounts/students.json");
+const DB_FILE = path.resolve(__outdirname, "src/config/students.json");
 
 // ======== Security Config ========
 const SALT_ROUNDS = 10;
@@ -24,6 +24,7 @@ export function loadStudents() {
   const raw = fs.readFileSync(DB_FILE, "utf-8");
   try {
     const parsed = JSON.parse(raw);
+    console.log("✅ Loaded students database with", Object.keys(parsed).length, "records");
     // Ensure we always return an object for keyed access
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
