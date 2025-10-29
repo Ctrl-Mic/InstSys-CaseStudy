@@ -34,6 +34,11 @@ app.get("/health", (req, res) => {
   console.log("Health check endpoint was called.");
 });
 
+app.get("/initialize/AI", (req, res) => {
+  console.log("initializing AI");
+  configPythonAPI();
+});
+
 app.use("/", loginRoute);
 app.use("/student", fetchStudentRoute);
 app.use("/", refreshCollections);
@@ -107,16 +112,6 @@ app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
     }
   }
 );
-
-(async () => {
-  try {
-    console.log("🧠 Initializing AI Analyst via Python API...");
-    const result = await configPythonAPI(["default_collection"]);
-    console.log("✅ AI Analyst configured successfully:", result);
-  } catch (err) {
-    console.error("❌ Failed to configure AI Analyst:", err.message);
-  }
-})();
 
 app.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);

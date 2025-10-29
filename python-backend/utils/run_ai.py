@@ -3,8 +3,6 @@ import sys
 import json
 from pathlib import Path
 import os
-import subprocess
-
 # --- Exception placeholder you can expand later --------------------------------
 class CustomPlaceholderError(Exception):
     """
@@ -60,7 +58,7 @@ def list_all_collections(config: dict):
     Falls back to a static list if discovery fails.
     """
     try:
-        from pymongo import MongoClient  # lazy import to avoid hard dependency during tooling
+        from pymongo import MongoClient  #type:ignore  lazy import to avoid hard dependency during tooling
     except Exception as e:
         print(f"⚠️ pymongo not available ({e}). Falling back to static collections.")
         return ["students_ccs", "schedules_ccs"]
@@ -98,7 +96,16 @@ def list_all_collections(config: dict):
         print(f"⚠️ Could not discover collections from MongoDB: {e}")
         print("   Falling back to static defaults.")
         return ["students_ccs", "schedules_ccs"]
-
+    
+def endpoint_connection():
+    
+    """function connection to entrypoint API
+    """
+    config_path = Path("config/config.json")
+    config = load_config(config_path)
+    collections = list_all_collections(config)
+    
+    return AIAnalyst(collections=collections, llm_config=config)
 
 def main():
     """
