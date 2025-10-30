@@ -4,7 +4,7 @@ import Popup from "../utils/popups";
 import FaceScanner from "../utils/faceScanner";
 
 function Login({ goRegister, goDashboard }) {
-  const [loading, setLoading] = useState(true); // loading until backend is ready
+  const [loading, setLoading] = useState(false); // loading until backend is ready
   const [form, setForm] = useState({
     studentId: "",
     email: "",
@@ -85,6 +85,8 @@ function Login({ goRegister, goDashboard }) {
   };
 
   const handleGuestLogin = async () => {
+    goDashboard();
+    
     const guestId = "PDM-0000-000000";
     try {
       // Fetch guest.json to get the role
