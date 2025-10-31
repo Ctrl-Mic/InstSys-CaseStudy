@@ -22,7 +22,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* Redirect "/" to dashboard */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
@@ -31,29 +30,29 @@ export default function App() {
 
         <Route
           path="/dashboard"
+          element={<Dashboard onLogout={handleLogout} studentId={studentId} />}
+        />
+
+        <Route
+          path="/chat"
           element={
-            studentId 
-              ? <Dashboard onLogout={handleLogout} studentId={studentId} />
-              : <Navigate to="/login" replace />
+            studentId ? (
+              <ChatPrompt studentId={studentId} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
 
-        <Route 
-          path="/chat" 
+        <Route
+          path="/account"
           element={
-            studentId 
-              ? <ChatPrompt studentId={studentId} />
-              : <Navigate to="/login" replace />
-          } 
-        />
-
-        <Route 
-          path="/account" 
-          element={
-            studentId 
-              ? <Account studentId={studentId} />
-              : <Navigate to="/login" replace />
-          } 
+            studentId ? (
+              <Account studentId={studentId} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
       </Routes>
     </BrowserRouter>

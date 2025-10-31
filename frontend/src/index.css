@@ -7,7 +7,7 @@
 body {
   display: flex;
   flex-direction: column;
-  background-color: #792c1a;
+  background-color: rgb(51,13,3);
 }
 
 /* Hide scrollbar but keep scrolling */
@@ -117,12 +117,24 @@ body {
   animation: slideIn 0.4s ease-out;
 }
 
+.typo-header-semibold {
+  @apply text-[clamp(1rem,2.2vw,3rem)] font-semibold;
+
+}
+.typo-header-bold {
+  @apply text-[clamp(1rem,2.2vw,3rem)] font-bold;
+}
+
 .typo-subheader-semibold {
   @apply text-[clamp(0.7rem,1.5vw,3rem)] font-semibold;
+
+}
+.typo-content-semibold {
+  @apply text-[clamp(0.7rem,1.2vw,3rem)] font-semibold;
 }
 
 .typo-buttons-regular {
-  @apply text-[clamp(0.7rem,0.8vw,3rem)] font-normal;
+  @apply text-[clamp(0.7rem,0.8vw,3rem)] font-[600];
 }
 
 .typo-buttons-semibold {
