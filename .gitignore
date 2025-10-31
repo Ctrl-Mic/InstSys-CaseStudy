@@ -2,8 +2,6 @@
 # PYTHON / FLASK BACKEND
 # =========================
 
-/backend/
-
 
 # Byte-compiled / cache
 __pycache__/
@@ -36,8 +34,6 @@ dist/
 build/
 
 # Environment files
-frontend/.env
-backend/.env
 
 # =========================
 # OS / IDE FILES
