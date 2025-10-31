@@ -2433,14 +2433,25 @@ class AIAnalyst:
         sorted_results = sorted(all_results, key=lambda x: x.get('relevance', 0), reverse=True)
         
         return sorted_results
-        
+    
+
+
+    # backend/utils/ai_core/analyst.py
+# Find the existing 'execute_reasoning_plan' method and replace it with this entire block:
+
     def execute_reasoning_plan(self, query: str, session: dict) -> tuple[str, Optional[dict], List[dict]]:
         """
         [MODIFIED FOR SESSIONS & SUMMARY] The main orchestration method.
         """
         self.debug("Starting reasoning plan execution...")
         start_time = time.time()
-# --- THIS IS THE CORRECTED CODE ---
+        start_datetime = datetime.now(timezone.utc) # <-- 1. ADD THIS TIMESTAMP
+
+        # --- 2. ADD THESE VARIABLE INITIALIZERS ---
+        planner_duration = 0.0
+        retrieval_duration = 0.0
+        synth_duration = 0.0
+        # --- END OF ADDITION ---
 
         context = session.get("structured_context", {})
         if context.get("clarification_pending"):
@@ -2514,6 +2525,9 @@ class AIAnalyst:
 
             # ADD THIS ENTIRE BLOCK before the 'for attempt...' loop
 
+            # --- 3. ADD PLANNER START TIME ---
+            planner_start_time = time.time()
+
             # --- DYNAMIC PROMPT SELECTOR (FINAL VERSION) ---
             is_ambiguous = False
             stripped_query = query.strip().lower()
@@ -2580,7 +2594,14 @@ class AIAnalyst:
             
             if not tool_call_json:
                 outcome = "FAIL_PLANNER"
+
+                # --- 4. ADD PLANNER DURATION (ON FAILURE) ---
+                planner_duration = time.time() - planner_start_time
+
                 raise ValueError(f"AI failed to select a valid tool after {max_retries} attempts.")
+
+            # --- 5. ADD PLANNER DURATION (ON SUCCESS) ---
+            planner_duration = time.time() - planner_start_time
 
             # 2. Execute the validated tool call
             tool_name = tool_call_json["tool_name"]
@@ -2589,14 +2610,40 @@ class AIAnalyst:
             # --- NEW: DEDICATED PATH FOR CONVERSATIONAL QUERIES ---
             if tool_name == "answer_conversational_query":
                 self.debug("-> Handling conversational query with a dedicated synth call.")
+
+                # --- 6. ADD SYNTH START/END FOR CONVO ---
+                synth_start_time = time.time()
                 final_answer = self.synth_llm.execute(
                     system_prompt="You are a friendly and helpful AI assistant for PDM. Respond naturally and conversationally to the user.",
                     user_prompt=query,
                     history=chat_history or [],
                     phase="synth"
                 )
+                synth_duration = time.time() - synth_start_time
+                # --- END OF ADDITION ---
+
                 execution_time = time.time() - start_time
-                self.training_system.record_query_result(query=query, plan=plan_json, outcome="SUCCESS_CONVERSATIONAL", execution_time=execution_time, final_answer=final_answer, results_count=0)
+
+                # --- 7. MODIFY THIS LOGGING CALL ---
+                self.training_system.record_query_result(
+                    query=query, 
+                    plan=plan_json, 
+                    outcome="SUCCESS_CONVERSATIONAL", 
+                    execution_time=execution_time, 
+                    final_answer=final_answer, 
+                    results_count=0,
+                    
+                    # --- ADD THESE FIELDS ---
+                    timestamp=start_datetime,
+                    session_id=session.get('session_id'),
+                    planner_duration=planner_duration,
+                    retrieval_duration=0.0, # No retrieval done
+                    synth_duration=synth_duration,
+                    planner_model=self.planner_llm.planner_model,
+                    synth_model=self.synth_llm.synth_model,
+                    plan_hash=None # No plan hash for simple convo
+                    # --- END OF ADDITION ---
+                )
                 return final_answer, plan_json, []
             # --- END OF NEW PATH ---
 
@@ -2604,6 +2651,8 @@ class AIAnalyst:
             
             collected_docs = []
 
+            # --- 8. ADD RETRIEVAL START TIME ---
+            retrieval_start_time = time.time()
 
             tool_name = plan_json.get("plan", [{}])[0].get("tool_call", {}).get("tool_name")
             if tool_name == "request_clarification":
@@ -2615,6 +2664,9 @@ class AIAnalyst:
                 
                 # Extract the question for the user from the plan
                 question_for_user = plan_json["plan"][0]["tool_call"]["parameters"]["question_for_user"]
+
+                # --- 9. ADD RETRIEVAL DURATION (ON CLARIFICATION) ---
+                retrieval_duration = time.time() - retrieval_start_time
 
                 # Update the session in the database with the pending state
                 self._update_session_history(session['session_id'], query, question_for_user)
@@ -2744,6 +2796,9 @@ class AIAnalyst:
             self.debug("="*50 + "\n")
             # --- ✨ END: DEBUG CODE ---
 
+            # --- 10. ADD RETRIEVAL DURATION (ON SUCCESS/FALLBACK) ---
+            retrieval_duration = time.time() - retrieval_start_time
+
             # 4. Build the final context for the synthesizer
             if outcome in ["SUCCESS_DIRECT", "SUCCESS_FALLBACK"]:
                 results_count = len(collected_docs)
@@ -2759,6 +2814,13 @@ class AIAnalyst:
         # In the execute_reasoning_plan function...
 
         except Exception as e:
+            # --- 11. ADD DURATION CAPTURE (ON EXCEPTION) ---
+            if planner_duration == 0.0 and 'planner_start_time' in locals():
+                planner_duration = time.time() - planner_start_time
+            if retrieval_duration == 0.0 and 'retrieval_start_time' in locals():
+                retrieval_duration = time.time() - retrieval_start_time
+            # --- END OF ADDITION ---
+
             # ⬇️ REPLACE THE EXISTING DEBUG LINE WITH THESE THREE LINES ⬇️
             import traceback
             self.debug(f"An unexpected error occurred: {e}")
@@ -2774,6 +2836,10 @@ class AIAnalyst:
 
         # 5. Synthesize the final answer
         self.debug("Synthesizing final answer...")
+
+        # --- 12. ADD SYNTHESIZER START TIME ---
+        synth_start_time = time.time()
+
         context_for_llm = json.dumps(final_context, indent=2, ensure_ascii=False)
         synth_prompt = PROMPT_TEMPLATES["final_synthesizer"].format(context=context_for_llm, query=query)
         final_answer = self.synth_llm.execute(
@@ -2783,10 +2849,30 @@ class AIAnalyst:
             phase="synth"
         )
 
+        # --- 13. ADD SYNTHESIZER DURATION ---
+        synth_duration = time.time() - synth_start_time
+
         corruption_details = sorted(list(self.corruption_warnings)) if self.corruption_warnings else None
 
         # Record the results for training using the fully corrected signature
         execution_time = time.time() - start_time
+
+        # --- 14. ADD THIS BLOCK TO CALCULATE PLAN HASH FOR LOGGING ---
+        plan_hash = None
+        if plan_json and outcome.startswith("SUCCESS"):
+            try:
+                # This logic mirrors _save_dynamic_example to ensure consistency
+                simplified_plan = plan_json.get("plan", [{}])[0].get("tool_call", {})
+                if simplified_plan:
+                    templates = self.policy_engine.delexicalize(query, simplified_plan)
+                    plan_template = templates["plan_template"]
+                    canonical_plan_str = json.dumps(plan_template, sort_keys=True)
+                    plan_hash = hashlib.sha256(canonical_plan_str.encode('utf-8')).hexdigest()
+            except Exception as e:
+                self.debug(f"Error calculating plan_hash for logging: {e}")
+        # --- END OF ADDITION ---
+
+        # --- 15. MODIFY THE FINAL record_query_result CALL ---
         self.training_system.record_query_result(
             query=query,
             plan=plan_json,
@@ -2797,7 +2883,18 @@ class AIAnalyst:
             outcome=outcome,
             analyst_mode=self.execution_mode,
             final_answer=final_answer,
-            corruption_details=corruption_details
+            corruption_details=corruption_details,
+
+            # --- ADD ALL THE NEW FIELDS HERE ---
+            timestamp=start_datetime,
+            session_id=session.get('session_id'),
+            planner_duration=planner_duration,
+            retrieval_duration=retrieval_duration,
+            synth_duration=synth_duration,
+            planner_model=self.planner_llm.planner_model,
+            synth_model=self.synth_llm.synth_model,
+            plan_hash=plan_hash
+            # --- END OF NEW FIELDS ---
         )
 
         # --- NEW BLOCK 2: Save newly found entities to the session ---
@@ -2809,10 +2906,7 @@ class AIAnalyst:
 
         
         return final_answer, plan_json, collected_docs
-    
-    # -------------------------------
-# Function use for Web
-# -------------------------------
+        
     def web_start_ai_analyst(self, user_query: str, session_id: str):
         """
         [CORRECTED VERSION] Executes the AI plan for a specific user session.

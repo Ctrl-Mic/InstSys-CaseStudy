@@ -1,6 +1,31 @@
 {
-  "ai_response": "I couldn't find any information about students in the BSPUTA program.",
-  "structured_data": [],
+  "ai_response": "Mark Garcia is a first-year student in the Bachelor of Science in Information Technology (BSIT) program at Pambayang Dalubhasaan ng Marilao (PDM).\n\n- Student ID: PDM-2025-001354\n- Program: BSIT\n- Year: 1\n- Section: A\n- Department: College of Computer Studies (CCS) [students_ccs]",
+  "structured_data": [
+    {
+      "source_collection": "students_ccs",
+      "content": "Student profile for Mark Garcia. ID: PDM-2025-001354. Program: BSIT, Year: 1, Section: A. Department: CCS.",
+      "metadata": {
+        "_id": "69043d53e644296fc5b7db5b",
+        "student_id": "PDM-2025-001354",
+        "completion_percentage": "44.44444444444444",
+        "contact_number": "09614411509",
+        "course": "BSIT",
+        "created_at": "2025-10-31 04:38:43.443000",
+        "department": "CCS",
+        "descriptor": "None",
+        "field_status": "{'student_id': 'complete', 'surname': 'missing', 'first_name': 'missing', 'course': 'complete', 'section': 'complete', 'year': 'complete', 'image': 'waiting', 'audio': 'waiting'}",
+        "first_name": "",
+        "full_name": "Mark Garcia",
+        "guardian_contact": "",
+        "guardian_name": "Roberto Cruz",
+        "section": "A",
+        "source": "file_extraction",
+        "surname": "",
+        "updated_at": "2025-10-31 04:38:43.443000",
+        "year": "1"
+      }
+    }
+  ],
   "image_map": {
     "by_id": {},
     "by_name": {}
