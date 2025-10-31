@@ -3,6 +3,7 @@ import "../css/login.css"
 import Popup from "../utils/popups";
 import FaceScanner from "../utils/faceScanner";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 function Login({ goRegister, goDashboard }) {
   const [loading, setLoading] = useState(true); // loading until backend is ready
@@ -12,6 +13,7 @@ function Login({ goRegister, goDashboard }) {
     password: "",
   });
   const [error, setError] = useState("");
+  const navigate = useNavigate();
  
 
   const [faceOn, setFaceOn] = useState(false);
@@ -60,7 +62,7 @@ function Login({ goRegister, goDashboard }) {
     showPopup("success", "Login successful!");
     // Trigger backend to refresh collections for new role/assign
     await fetch("http://127.0.0.1:5000/refresh_collections", { method: "POST" });
-    goDashboard();
+    navigate("/dashboard")
   };
 
   const handleLogin = async (e) => {
@@ -219,7 +221,7 @@ function Login({ goRegister, goDashboard }) {
             <button
                 type="button"
                 className="font-sans font-medium underline text-[clamp(0.6rem,1.3vw,1.2rem)] cursor-pointer"
-                onClick={goRegister}
+                onClick={() => {navigate("/register")}}
               >
                 Create Account →
               </button>

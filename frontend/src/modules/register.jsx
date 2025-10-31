@@ -3,6 +3,7 @@ import "../css/register.css";
 import { motion } from "framer-motion";
 import Popup from "../utils/popups";
 import * as faceapi from "face-api.js";
+import { useNavigate } from "react-router-dom";
 
 function Register({ goLogin }) {
   const fileInputRef = useRef(null);
@@ -17,7 +18,7 @@ function Register({ goLogin }) {
   });
 
   const [showPassword, setShowPassword] = useState(false);
-
+  const navigate = useNavigate();
   const showPopup = (type, message) => {
     setPopup({ show: true, type, message });
 
@@ -196,7 +197,7 @@ function Register({ goLogin }) {
 
       if (res.ok) {
         setShowSuccess(true);
-        goLogin();
+        navigate("/login")
       } else {
         showPopup("error", data.error || "❌ Registration failed.");
       }
@@ -431,7 +432,7 @@ function Register({ goLogin }) {
 
               <button
                 type="button"
-                onClick={() => (window.location.href = "/login")}
+                onClick={() => navigate("/login")}
                 className="font-sans font-medium underline text-[clamp(0.6rem,1.3vw,1.2rem)] cursor-pointer"
               >
                 ← Already Have an Account?

@@ -1,16 +1,15 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import App from './components/app.jsx'
+import { useGSAP } from "@gsap/react";
+import gsap from 'gsap';
+import { SplitText } from "gsap/all";
 import './index.css'
-import ChatPrompt from './modules/chatPrompt.jsx'
-import Navigate from './components/navigate.jsx'
-import Register from './modules/register.jsx'
-import Login from './modules/login.jsx'
-import Sample from './sample.jsx'
-import Dashboard from './modules/dashboard.jsx'
+
+gsap.registerPlugin(SplitText);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {/* <Sample/> */}
-    <Navigate /> 
+    <App /> 
   </StrictMode>
 )
