@@ -6,11 +6,13 @@ import NavigatingApp from "../components/navigatingApp.jsx";
 import CourseDisplay from "./courseDisplay.jsx";
 import PopupGuide from "../utils/popupGuide.jsx";
 
-function Dashboard({ goChat, goAccounts, goLogin }) {
-  const [activeIndex, setActiveIndex] = useState(1);
-  const [activeView, setActiveView] = useState(1);
-  const [scrollPage, setScrollPage] = useState("home");
-  const [showPopup, setShowPopup] = useState(true);
+import AboutPDM from "../modules/AboutPDM.jsx";
+
+function Dashboard({goChat, goAccounts,goLogin}) {
+   const [activeIndex, setActiveIndex] = useState(1);
+   const [activeView, setActiveView] = useState(1); 
+   const [scrollPage, setScrollPage] = useState("home")
+   const [showPopup, setShowPopup] = useState(true);
 
   useEffect(() => {
     if (!scrollPage) return;
@@ -72,7 +74,7 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
   return (
     <>
       <div className="flex flex-col">
-        {/* {showPopup && (
+      {/* {showPopup && (
         <div className="w-full h-full absolute bg-black/70 z-30 flex justify-center items-center">
           <PopupGuide onClose={() => setShowPopup(false)} />
         </div> */}
@@ -236,6 +238,17 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
 
         <div id="about" className="w-full h-[100vh] bg-white"></div>
       </div>
+<AboutPDM />
+      <div id="programs" className=" flex flex-row items-center justify-center shadow-lg shadow-gray-400 bg-amber-500 w-full h-90 z-1">
+        <div className="w-[80%] h-[110%] shadow-lg shadow-red-700 bg-amber-900">
+          <CourseDisplay />
+        </div>
+<div id="about" className="w-full h-[100vh] bg-white">
+  
+</div>
+;
+      </div>
+    </div>
     </>
   );
 }
