@@ -32,7 +32,7 @@ class Connector {
           await handler.store(extractedData, this.db);
         } catch (error) {
           console.error(`❌ Error processing ${handler.errorMsg}:`, error.message);
-        } 
+        }
       }
 
     } catch (error) {

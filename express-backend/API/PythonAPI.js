@@ -42,7 +42,7 @@ export function configPythonAPI() {
   cron.schedule("*/10 * * * * *", async function () {
     try {
       const new_mode = await networkChecker();
-Q
+      
       if (new_mode !== execution_mode) {
 
         execution_mode = new_mode;
@@ -62,3 +62,11 @@ Q
     }
   });
 }
+
+export function PythonAPIImage() {
+  try {
+
+  } catch ( error ) {
+    console.log("error");
+  }
+} 
