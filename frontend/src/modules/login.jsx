@@ -12,7 +12,8 @@ function Login({ goRegister, goDashboard }) {
     password: "",
   });
 
-  const EXPRESS_API = import.meta.env.VITE_EXPRESS_API;
+  // const EXPRESS_API = import.meta.env.VITE_EXPRESS_API;
+  const EXPRESS_API = "http://localhost:5000";
   const PYTHON_API = import.meta.env.VITE_PYTHON_API;
 
   const [faceOn, setFaceOn] = useState(false);
@@ -127,7 +128,7 @@ function Login({ goRegister, goDashboard }) {
     try {
       // goDashboard();
       // Fetch guest.json to get the role
-      const guestRes = await fetch(`${EXPRESS_API}/student/ + guestId`);
+      const guestRes = await fetch(`${EXPRESS_API}/student/${guestId}`);
       // if (!guestRes.ok) {
       //   showPopup("error", "Guest account not found");
       //   return;

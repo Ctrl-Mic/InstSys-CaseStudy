@@ -1,12 +1,12 @@
 import express from "express";
 import cors from "cors";
 import loginRoute from "./routes/loginRoute.js";
-// import guestRoute from "./routes/guestRoute.js";
-import { connection , upload } from "./src/modules/modules.connection.js";
 import fetchStudentRoute from "./routes/fetchStudentRoute.js";
 import registerRoute from "./routes/registerRoute.js";
 import refreshCollections from "./routes/refreshCollections.js";
 import coursesRoute from "./routes/coursesRoute.js";
+import fileRoute from "./routes/fileRoute.js";
+import { connection , upload } from "./src/modules/modules.connection.js";
 import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
 import Filemeta from './src/utils/cons.js'
 import path from "path";
@@ -52,6 +52,7 @@ app.use("/student", fetchStudentRoute);
 app.use("/", refreshCollections);
 app.use("/", registerRoute);
 app.use("/", coursesRoute);
+app.use("/", fileRoute);
 
 // ✅ Example endpoint that talks to Python
 app.post("/v1/chat/prompt", async (req, res) => {
@@ -70,6 +71,8 @@ app.post("/v1/chat/prompt", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch data from Python API" });
   }
 });
+
+app.use(express.urlencoded({ extended: true }));
 
 app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
     try {
@@ -92,7 +95,7 @@ app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
         return res.status(415).json({ error: "Unsupported file type" });
       }
 
-      const category = req.body?.category.toString();
+      const category = String(req.body?.category || "unknown");
       const overwrite = (req.body?.overwrite === "true") || false;
 
       const filePayload = {

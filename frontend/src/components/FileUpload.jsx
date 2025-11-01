@@ -2,74 +2,49 @@ import React, { useRef, useState, useEffect } from "react";
 import FileDisplayCard from "./FileDisplayCard.jsx";
 import FileModal from "./fileModal.jsx";
 import Popup from "../utils/popups.jsx";
+import FileTree from "./FileTree";
 
 function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
   const fileInputRef = useRef(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [popup, setPopup] = useState({ show: false, type: "success", message: "" });
-  // const [uploadedFiles, setUploadedFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState({
-  faculty: [],
-  students: [],
-  admin: [],
-});
+    faculty: [],
+    students: [],
+    admin: [],
+  });
 
-
-  // // Fetch files from backend uploads folder
-  // const fetchFiles = () => {
-  //   fetch("http://127.0.0.1:5000/list_uploads")
-  //     .then((res) => res.json())
-  //     .then((data) => setUploadedFiles(data))
-  //     .catch(() => setUploadedFiles([]));
-  // };
-
+  // Fetch files from backend uploads folder
   const fetchFiles = async () => {
-  try {
-    const res = await fetch("http://127.0.0.1:5000/files");
-    const data = await res.json();
+    try {
+      const res = await fetch("http://127.0.0.1:5000/files");
+      const data = await res.json();
 
-    if (data.files) {
-      setUploadedFiles({
-        faculty: data.files.faculty || [],
-        students: data.files.students || [],
-        admin: data.files.admin || [],
-      });
+      if (data.files) {
+        setUploadedFiles(data.files); // Set the nested file structure
+      }
+    } catch (err) {
+      console.error("Error fetching files:", err);
+      setUploadedFiles({});
     }
-  } catch (err) {
-    console.error("Error fetching files:", err);
-    setUploadedFiles({ faculty: [], students: [], admin: [] });
-  }
-};
+  };
 
   useEffect(() => {
     fetchFiles();
   }, []);
 
   // Delete file handler
-  // const handleDeleteFile = (filename) => {
-  //   if (!window.confirm(`Delete "${filename}"?`)) return;
-  //   fetch(`http://127.0.0.1:5000/delete_upload/${encodeURIComponent(filename)}`, {
-  //     method: "DELETE",
-  //   })
-  //     .then((res) => {
-  //       if (res.ok) fetchFiles();
-  //       else alert("Failed to delete file.");
-  //     })
-  //     .catch(() => alert("Failed to delete file."));
-  // };
-
-  //Delete confirmations
-  const handleDeleteFile = (filename, category) => {
-  if (!window.confirm(`Delete "${filename}" from ${category}?`)) return;
-  fetch(`http://127.0.0.1:5000/delete_upload/${category}/${encodeURIComponent(filename)}`, {
-    method: "DELETE",
-  })
-    .then((res) => {
-      if (res.ok) fetchFiles();
-      else alert("Failed to delete file. nag else");
+  const handleDeleteFile = (filename, folder) => {
+    if (!window.confirm(`Delete "${filename}" from ${folder}?`)) return;
+    fetch(`http://127.0.0.1:5000/delete_upload/${folder}/${encodeURIComponent(filename)}`, {
+      method: "DELETE",
     })
-    .catch(() => alert("Failed to delete file. nag catch"));
-};
+      .then((res) => {
+        if (res.ok) fetchFiles();
+        else alert("Failed to delete file.");
+      })
+      .catch(() => alert("Failed to delete file."));
+  };
 
   const showPopup = (type, message) => {
     setPopup({ show: true, type, message });
@@ -184,13 +159,13 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
               Faculties and Curriculum
             </h1>
             <div className="flex 0 w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide" 
-            onWheel={(e) => {
-              if (e.deltaY !==0) {
-                e.currentTarget.scrollLeft += e.deltaY;
-              }
-            }}>
+              onWheel={(e) => {
+                if (e.deltaY !== 0) {
+                  e.currentTarget.scrollLeft += e.deltaY;
+                }
+              }}>
               {/* Display the files in the UI for Faculties */}
-              {uploadedFiles.faculty.map((file) => (
+              {(uploadedFiles.faculty || []).map((file) => (
                 <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "faculty")} />
               ))}
             </div>
@@ -206,8 +181,8 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
                 e.currentTarget.scrollLeft += e.deltaY;
               }
             }}>
-              {/* for Students */}
-              {uploadedFiles.students.map((file) => (
+              {/* For Students */}
+              {(uploadedFiles.students || []).map((file) => (
                 <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "students")} />
               ))}
             </div>
@@ -222,8 +197,8 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
                 e.currentTarget.scrollLeft += e.deltaY;
               }
             }}>
-              {/* for Admins */}
-              {uploadedFiles.admin.map((file) => (
+              {/* For Admins */}
+              {(uploadedFiles.admin || []).map((file) => (
                 <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "admin")} />
               ))}
             </div>
@@ -258,6 +233,10 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
           message={popup.message}
           onClose={() => setPopup({ show: false, type: "", message: "" })}
         />
+      </div>
+      <div className="file-upload">
+        <h1 className="text-2xl font-bold mb-4">Uploaded Files</h1>
+        <FileTree files={uploadedFiles} onDelete={handleDeleteFile} />
       </div>
     </>
   );
