@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import "../css/dashboard.css";
 import CreatingAccount from "../components/creatingAccount.jsx";
 import UsingApp from "../components/usingApp.jsx";
@@ -6,6 +6,7 @@ import NavigatingApp from "../components/navigatingApp.jsx";
 import CourseDisplay from "./courseDisplay.jsx";
 import PopupGuide from "../utils/popupGuide.jsx";
 import AboutPDM from "./about.jsx";
+import { useNavigate } from "react-router-dom";
 import Objectives from "./objectives.jsx";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger, ScrollSmoother } from "gsap/all";
@@ -14,11 +15,13 @@ import gsap from "gsap";
 gsap.registerPlugin(ScrollSmoother, ScrollTrigger);
 
 function Dashboard({ goChat, goAccounts, goLogin }) {
+  const smootherRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(1);
   const [activeView, setActiveView] = useState(1);
   const [scrollPage, setScrollPage] = useState("home");
   const [showPopup, setShowPopup] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkServer = async () => {
@@ -97,12 +100,19 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
 
   useGSAP(() => {
     if (loading) return;
-    gsap.from(".navigation-bar", {
-      y: -50,
-      duration: 0.7,
-      ease: "circ",
-    });
 
+    // ✅ Create ScrollSmoother if not exists
+    if (!smootherRef.current) {
+      smootherRef.current = ScrollSmoother.create({
+        wrapper: "#smooth-wrapper",
+        content: "#smooth-content",
+        smooth: 2,
+        effects: true,
+      });
+    }
+
+    // ✅ GSAP Animations
+    gsap.from(".navigation-bar", { y: -50, duration: 0.7, ease: "circ" });
     gsap.from(".hero-text", {
       yPercent: 130,
       duration: 1,
@@ -111,7 +121,7 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
     });
 
     gsap.from(".course-text", {
-      translateX: -1000,
+      x: -1000,
       duration: 1,
       stagger: 0.5,
       scrollTrigger: {
@@ -121,7 +131,7 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
     });
 
     gsap.from(".feature-text", {
-      translateX: -1000,
+      x: -1000,
       duration: 1.5,
       stagger: 0.2,
       ease: "circ.Out",
@@ -131,15 +141,22 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
       },
     });
 
-    // gsap.from(".main-image", {
-    //   x: -100,
-    //   duration: 1,
-    //   stagger: 0.5,
-    //   scrollTrigger: {
-    //     trigger: ".main-image",
-    //     start: "top 100%",
-    //   },
-    // });
+    // ✅ Refresh after animation + smoother init
+    ScrollTrigger.refresh();
+
+    return () => {
+      // ✅ Kill ScrollTrigger animations
+      ScrollTrigger.getAll().forEach((t) => t.kill());
+      gsap.killTweensOf(
+        ".navigation-bar, .hero-text, .course-text, .feature-text"
+      );
+
+      // ✅ Destroy smoother so it can rebuild
+      if (smootherRef.current) {
+        smootherRef.current.kill();
+        smootherRef.current = null;
+      }
+    };
   }, [loading]);
 
   useEffect(() => {
@@ -173,16 +190,16 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
                 <span className="text-amber-300">Information</span>System
               </h1>
             </div>
-            <div className="flex items-center gap-5 typo-content-regular">
+            <div className="flex items-center gap-5 typo-buttons-semibold">
               <a
-                href="#Guide"
+                href="#home"
                 onClick={(e) => {
                   e.preventDefault();
-                  setScrollPage("guide");
+                  setScrollPage("home");
                 }}
               >
                 {" "}
-                Guide{" "}
+                Home{" "}
               </a>
               <a
                 href="#Courses"
@@ -204,7 +221,7 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
                 {" "}
                 About PDM{" "}
               </a>
-              <button className="bg-amber-400 py-[0.5rem] px-[1.4rem] text-white font-semibold rounded-sm shadow-amber-950/50 shadow-md cursor-pointer hover:scale-105 duration-300">
+              <button onClick={() => {navigate("/login")}} className="bg-amber-400 py-[0.5rem] px-[1.4rem] text-white font-semibold rounded-sm shadow-amber-950/50 shadow-md cursor-pointer hover:scale-105 duration-300">
                 Log In
               </button>
             </div>
@@ -231,16 +248,12 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
                 </div>
                 <div className="flex gap-7 w-full justify-center">
                   <button
-                    onClick={goChat}
+                    onClick={() => {
+                      navigate("/chatPrompt");
+                    }}
                     className="text-amber-950 cursor-pointer w-[12vw] py-[0.5rem] font-bold text-[clamp(0.5rem,1.3vw,2rem)] rounded-md bg-amber-400 shadow-md shadow-black hover:scale-105 transition-all duration-300"
                   >
                     Try AI
-                  </button>
-                  <button
-                    onClick={() => setScrollPage("guide")}
-                    className="text-white cursor-pointer w-[12vw] py-[0.5rem] font-bold text-[clamp(0.5rem,1.3vw,2rem)] rounded-md border-white border-2 shadow-md shadow-black hover:scale-105 transition-all duration-300"
-                  >
-                    User Guide
                   </button>
                 </div>
               </div>
@@ -254,13 +267,13 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
                   Explore our most popular courses designed by industry experts
                 </h2>
               </div>
-              <div>
+              <div id="courses">
                 <CourseDisplay />
               </div>
             </div>
 
             {/* Mission and Vission */}
-            <div className="w-full flex flex-row justify-between gap-[3vw] p-[2vw]">
+            <div id="about" className="w-full flex flex-row justify-between gap-[3vw] p-[2vw]">
               <div className="main-image flex flex-col w-[55%] rounded-md aspect-[1] p-[4vw] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/mainSection.jpg)] bg-left bg-no-repeat bg-cover">
                 <div className="flex flex-col w-[80%] h-fit overflow-hidden">
                   <h1 className="feature-text typo-header-semibold text-amber-500">
@@ -312,9 +325,14 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
                 </div>
               </div>
             </div>
-            <div id="about" className="w-full p-[3vw] flex justify-center bg-amber-500">
+            <div
+              id="objectives"
+              className="w-full p-[3vw] flex justify-center bg-amber-500"
+            >
               <Objectives></Objectives>
-              {/* <AboutPDM></AboutPDM> */}
+            </div>
+            <div className="w-full flex justify-center">
+              <AboutPDM></AboutPDM>
             </div>
           </div>
 

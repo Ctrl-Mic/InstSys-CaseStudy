@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import "../css/chatPrompt.css";
 import FileUpload from "../components/FileUpload";
 import AiChat from "./aiChat";
@@ -14,6 +15,7 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
   const [studentData, setStudentData] = useState(null);
   const [activeView, setActiveView] = useState(initialView);
   const [aiText, setAiText] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loggedInId = localStorage.getItem("studentId"); // save this in login
@@ -273,7 +275,9 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
                 </h1>
               </div>
               <div
-                onClick={goDashboard}
+                onClick={() => {
+                  navigate("/dashboard")
+                }}
                 className="w-full flex items-center h-[5vh] hover:scale-103 transition-all duration-300 cursor-pointer"
               >
                 <button href="/files" onClick={goDashboard}>

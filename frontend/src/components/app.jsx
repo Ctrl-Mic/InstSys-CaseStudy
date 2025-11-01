@@ -34,14 +34,14 @@ export default function App() {
         />
 
         <Route
-          path="/chat"
-          element={
-            studentId ? (
-              <ChatPrompt studentId={studentId} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
+          path="/chatPrompt" element={<ChatPrompt/>}
+          // element={
+          //   studentId ? (
+          //     <ChatPrompt studentId={studentId} />
+          //   ) : (
+          //     <Navigate to="/login" replace />
+          //   )
+          // }
         />
 
         <Route

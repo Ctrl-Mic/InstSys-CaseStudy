@@ -88,8 +88,6 @@ function Login({ goRegister, goDashboard }) {
   };
 
   const handleGuestLogin = async () => {
-    goDashboard();
-    
     const guestId = "PDM-0000-000000";
     try {
       // Fetch guest.json to get the role
@@ -136,7 +134,7 @@ function Login({ goRegister, goDashboard }) {
           initial={{ opacity: 0.6 }}   // Start below, invisible
           animate={{ opacity: 1 }}    // Slide up & fade in
           transition={{ duration: 0.5, ease: "easeOut" }} 
-          className="screen p-10 w-screen h-screen bg-[linear-gradient(to_right,rgba(121,44,26,0.7),rgba(240,177,0,0.6)),url('/images/PDM-Facade.png')] bg-cover bg-center flex flex-row justify-between items-center">
+          className="screen p-10 w-screen h-screen bg-[linear-gradient(to_bottom,rgba(121,44,26,0.8),rgba(51,13,3,1)),url('/images/PDM-Facade.png')] bg-cover bg-center flex flex-row justify-between items-center">
           {/* Left Card */}
           <div className="w-full h-screen flex flex-col gap-2 justify-center items-center">
             <div className="logo bg-[url('/images/PDM-Logo.svg')] bg-contain w-[30vw] h-[30vw]"></div>
