@@ -116,21 +116,39 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
       scrollTrigger: {
         trigger: ".course-text",
         start: "top 100%",
-        toggleActions: "play reverse play reverse",
-      }
-    })
+      },
+    });
+
+    gsap.from(".feature-text", {
+      translateX: -1000,
+      duration: 1.5,
+      stagger: 0.2,
+      ease: "circ.Out",
+      scrollTrigger: {
+        trigger: ".main-image",
+        start: "top 100%",
+      },
+    });
+
+    // gsap.from(".main-image", {
+    //   x: -100,
+    //   duration: 1,
+    //   stagger: 0.5,
+    //   scrollTrigger: {
+    //     trigger: ".main-image",
+    //     start: "top 100%",
+    //   },
+    // });
   }, [loading]);
 
   useEffect(() => {
     if (loading) return;
-    const smoother = ScrollSmoother.create(
-      {
-        wrapper: "#smooth-wrapper",
-        content: "#smooth-content",
-        smooth: 2,
-        effects: true,
-      }
-    );
+    const smoother = ScrollSmoother.create({
+      wrapper: "#smooth-wrapper",
+      content: "#smooth-content",
+      smooth: 5,
+      effects: true,
+    });
   }, [loading]);
   return (
     <>
@@ -154,7 +172,7 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
                 <span className="text-amber-300">Information</span>System
               </h1>
             </div>
-            <div className="flex items-center gap-5 typo-buttons-regular">
+            <div className="flex items-center gap-5 typo-content-regular">
               <a
                 href="#Guide"
                 onClick={(e) => {
@@ -228,7 +246,9 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
             </div>
             <div className="w-full flex flex-col gap-5 bg-[rgb(51,13,3)] h-fit p-[2vw]">
               <div className="flex flex-col p-[1vw] border-l-5 overflow-hidden border-amber-400 text-white">
-                <h1 className="course-text typo-header-semibold">Offereded Programs</h1>
+                <h1 className="course-text typo-header-semibold">
+                  Offereded Programs
+                </h1>
                 <h2 className="course-text typo-content-semibold">
                   Explore our most popular courses designed by industry experts
                 </h2>
@@ -240,14 +260,62 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
 
             {/* Mission and Vission */}
             <div className="w-full flex flex-row justify-between gap-[3vw] p-[2vw]">
-                <div className="w-[55%] rounded-md aspect-[1] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/graduation.jpg)] bg-no-repeat bg-cover"></div>
-                <div className="w-[45%] flex flex-col gap-[3vw]">
-                  <div className="w-full rounded-md aspect-square bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/Atrium.jpg)] bg-no-repeat bg-cover"></div>
-                  <div className="w-full rounded-md aspect-square bg-amber-300"></div>
+              <div className="main-image flex flex-col w-[55%] rounded-md aspect-[1] p-[4vw] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/mainSection.jpg)] bg-left bg-no-repeat bg-cover">
+                <div className="flex flex-col w-[80%] h-fit overflow-hidden">
+                  <h1 className="feature-text typo-header-semibold text-amber-500">
+                    Information System
+                  </h1>
+                  <h2 className="feature-text typo-content-regular text-white text-justify">
+                    This Localized AI Information System is designed to make
+                    school processes smarter, faster, and easier. With
+                    intelligent guidance, real-time assistance, and a
+                    user-friendly interface, everyone can quickly access
+                    information, explore system features, and get support
+                    whenever they need it — all in just a ew clicks.
+                  </h2>
                 </div>
+              </div>
+
+              <div className="w-[45%] flex flex-col gap-[3vw]">
+                <div className="flex flex-col w-full p-[4vw] rounded-md aspect-square bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/mission.jpg)] bg-center bg-no-repeat bg-cover">
+                  <div className="flex flex-col w-[100%] h-fit overflow-hidden">
+                    <h1 className="feature-text typo-header-semibold text-amber-500">
+                      Mission
+                    </h1>
+                    <h2 className="feature-text typo-content-regular text-white text-justify">
+                      Cognizant of the importance of contributing to the
+                      realization of national development goals and right of
+                      every citizen to quality education, PDM commit itself to
+                      the provision of quality education, and mold its students
+                      into productive and responsible citizens who are imbued
+                      with virtues, aware of their national heritage and proud
+                      of their local culture.
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="flex flex-col w-full p-[4vw] rounded-md aspect-square bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/vision.jpg)] bg-no-repeat bg-cover">
+                  <div className="flex flex-col w-[100%] h-fit overflow-hidden">
+                    <h1 className="feature-text typo-header-semibold text-amber-500">
+                      Vision
+                    </h1>
+                    <h2 className="feature-text typo-content-regular text-white text-justify">
+                      The Pambayang Dalubhasaan ng Marilao (PDM), one of the
+                      premier higher educational institutions in the region in
+                      providing quality subsidized tertiary education and
+                      industry training programs committed to produce competent,
+                      competitive, capable, and skillful graduates who excel in
+                      their chosen field.
+                    </h2>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="about" className="w-full bg-white">
+              <AboutPDM></AboutPDM>
             </div>
           </div>
-          
+
           {/* <div
             id="courses"
             className=" flex flex-row items-center justify-center shadow-lg shadow-gray-400 bg-amber-500 w-full h-90 z-1"

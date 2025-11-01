@@ -118,23 +118,33 @@ body {
 }
 
 .typo-header-semibold {
-  @apply text-[clamp(1rem,2.2vw,3rem)] font-semibold;
+  @apply text-[clamp(2rem,2.7vw,3rem)] font-semibold;
 
 }
 .typo-header-bold {
-  @apply text-[clamp(1rem,2.2vw,3rem)] font-bold;
+  @apply text-[clamp(2rem,2.7vw,3rem)] font-bold;
 }
 
 .typo-subheader-semibold {
-  @apply text-[clamp(0.7rem,1.5vw,3rem)] font-semibold;
+  @apply text-[clamp(1.5rem,2.2vw,3rem)] font-semibold;
 
 }
+/* Content Typography */
+.typo-content-bold {
+  @apply text-[clamp(0.7rem,1.2vw,3rem)] font-bold;
+}
+
 .typo-content-semibold {
   @apply text-[clamp(0.7rem,1.2vw,3rem)] font-semibold;
 }
 
+.typo-content-regular {
+  @apply text-[clamp(0.7rem,1.2vw,3rem)] font-normal;
+}
+/* Content Typography */
+
 .typo-buttons-regular {
-  @apply text-[clamp(0.7rem,0.8vw,3rem)] font-[600];
+  @apply text-[clamp(0.8rem,2vw,2rem)] font-[600];
 }
 
 .typo-buttons-semibold {

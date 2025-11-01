@@ -40,10 +40,10 @@ export default function CourseDisplay() {
                   index === activeSlide ? "opacity-100 z-1" : "opacity-0 z-0"
                 }`}
               >
-                <h1 className="text-[clamp(0.8rem,2vw,2rem)] leading-tight text-amber-400 typo-header-bold overflow-hidden">
+                <h1 className="typo-header-semibold leading-tight text-amber-400 typo-header-bold overflow-hidden">
                   {slide.department}
                 </h1>
-                <h1 className="text-[clamp(2rem,2.7vw,3rem)] line-clamp-3 leading-tight text-white font-bold">
+                <h1 className="typo-subheader-semibold line-clamp-3 leading-tight text-white font-bold">
                   {slide.program}
                 </h1>
               </div>
@@ -55,7 +55,7 @@ export default function CourseDisplay() {
                   index === activeSlide ? "opacity-100 z-1" : "opacity-0 z-0"
                 }`}
               >
-                <h2 className="text-[clamp(0.8rem,2vw,2rem)] leading-tight font-medium typo-content-semibold whitespace-pre-line line-clamp-4 text-justify  text-white">
+                <h2 className="typo-content-regular leading-tight font-medium typo-content-semibold whitespace-pre-line line-clamp-4 text-justify  text-white">
                 {slide.description}
               </h2>
               </div>
