@@ -6,6 +6,7 @@ import NavigatingApp from "../components/navigatingApp.jsx";
 import CourseDisplay from "./courseDisplay.jsx";
 import PopupGuide from "../utils/popupGuide.jsx";
 import AboutPDM from "./about.jsx";
+import Objectives from "./objectives.jsx";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger, ScrollSmoother } from "gsap/all";
 import gsap from "gsap";
@@ -311,8 +312,9 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
                 </div>
               </div>
             </div>
-            <div id="about" className="w-full bg-white">
-              <AboutPDM></AboutPDM>
+            <div id="about" className="w-full p-[3vw] flex justify-center bg-amber-500">
+              <Objectives></Objectives>
+              {/* <AboutPDM></AboutPDM> */}
             </div>
           </div>
 
