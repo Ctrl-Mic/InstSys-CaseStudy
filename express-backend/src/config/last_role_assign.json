@@ -1,6 +1,6 @@
 {
-  "role": "Guest",
+  "role": "admin",
   "assign": [
-    "Guest"
+    ""
   ]
 }

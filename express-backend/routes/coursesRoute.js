@@ -9,7 +9,8 @@ const router = express.Router();
 // === Course management ===
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const COURSES_FILE = path.join(__dirname, "../src/config/courses.json");
+const __outdirname = path.dirname(__dirname);
+const COURSES_FILE = path.join(__outdirname, "src/config/courses.json");
 
 // Load courses (auto-create empty if not exist or invalid)
 function loadCourses() {
