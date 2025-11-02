@@ -22,8 +22,7 @@ function FaceScanner({ faceOn, onClose }) {
         .getUserMedia({
           video: {
             width: { ideal: 1280 },  // try 640, 720, 1080, 1920, etc.
-            height: { ideal: 1280 },
-            facingMode: "user", // ensures front camera on laptops/phones
+            height: { ideal: 1280 },// ensures front camera on laptops/phones
           },
         })
         .then((stream) => {

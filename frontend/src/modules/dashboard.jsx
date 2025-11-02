@@ -1,10 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import "../css/dashboard.css";
-import CreatingAccount from "../components/creatingAccount.jsx";
-import UsingApp from "../components/usingApp.jsx";
-import NavigatingApp from "../components/navigatingApp.jsx";
 import CourseDisplay from "./courseDisplay.jsx";
-import PopupGuide from "../utils/popupGuide.jsx";
 import AboutPDM from "./about.jsx";
 import { useNavigate } from "react-router-dom";
 import Objectives from "./objectives.jsx";
@@ -15,30 +11,61 @@ import gsap from "gsap";
 gsap.registerPlugin(ScrollSmoother, ScrollTrigger);
 
 function Dashboard({ goChat, goAccounts, goLogin }) {
+  //* ============= ENV API'S =============
+  const EXPRESS_API = import.meta.env.VITE_EXPRESS_API;
+  const PYTHON_API = import.meta.env.VITE_PYTHON_API;
+  //* =============== REFS ===============
+  const [studentData, setStudentData] = useState(null);
   const smootherRef = useRef(null);
+  //* ============== STATE ===============
   const [loading, setLoading] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(1);
-  const [activeView, setActiveView] = useState(1);
+  const [guest, setGuest] = useState(true);
   const [scrollPage, setScrollPage] = useState("home");
-  const [showPopup, setShowPopup] = useState(true);
+  //* ======== NAVIGATION HANDLER ========
   const navigate = useNavigate();
 
+  //! ++++++++++++++++++++++ FUNCTIONS +++++++++++++++++++++
   useEffect(() => {
+    //* ==================================
+    //? TEMP LOG-IN DATA
+    //* =================================
+    const loggedInData = () => {
+      fetch(`${EXPRESS_API}/student/${localStorage.getItem("studentId")}`)
+        .then((res) => res.json())
+        .then((data) => {
+          console.log(data);
+          if (data.role == "Guest") {
+            setGuest(true);
+          } else {
+            setGuest(false);
+          }
+          console.log("Guest Mode:", guest);
+          //! Temporarily stores log in data for reusability
+          setStudentData(data);
+        })
+        .catch((err) => console.error("Fetch error:", err));
+    };
+
+    //* ==================================
+    //? CHECK SERVER HEALTH
+    //* ==================================
     const checkServer = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/health");
+        const res = await fetch(`${EXPRESS_API}/health`);
         if (res.ok) {
-          setLoading(false); // backend is ready → hide loading
+          //! Set loading state to false once server responds
+          setLoading(false);
+          loggedInData();
         } else {
-          setTimeout(checkServer, 200); // retry after 1s
+          setTimeout(checkServer, 200);
         }
       } catch {
-        setTimeout(checkServer, 200); // retry after 1s
+        setTimeout(checkServer, 200);
       }
     };
 
     checkServer();
-  }, []);
+  }, [location.pathname, guest]);
 
   useEffect(() => {
     if (!scrollPage) return;
@@ -94,14 +121,14 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem("studentId"); // clear saved session
-    goLogin(); // go back to Login page
+    localStorage.removeItem("studentId"); //* clear saved session
+    goLogin(); //* go back to Login page
   };
 
   useGSAP(() => {
     if (loading) return;
 
-    // ✅ Create ScrollSmoother if not exists
+    //* ✅ Create ScrollSmoother if not exists
     if (!smootherRef.current) {
       smootherRef.current = ScrollSmoother.create({
         wrapper: "#smooth-wrapper",
@@ -111,7 +138,7 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
       });
     }
 
-    // ✅ GSAP Animations
+    //* ✅ GSAP Animations
     gsap.from(".navigation-bar", { y: -50, duration: 0.7, ease: "circ" });
     gsap.from(".hero-text", {
       yPercent: 130,
@@ -141,17 +168,17 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
       },
     });
 
-    // ✅ Refresh after animation + smoother init
+    //* ✅ Refresh after animation + smoother init
     ScrollTrigger.refresh();
 
     return () => {
-      // ✅ Kill ScrollTrigger animations
+      //* ✅ Kill ScrollTrigger animations
       ScrollTrigger.getAll().forEach((t) => t.kill());
       gsap.killTweensOf(
         ".navigation-bar, .hero-text, .course-text, .feature-text"
       );
 
-      // ✅ Destroy smoother so it can rebuild
+      //* ✅ Destroy smoother so it can rebuild
       if (smootherRef.current) {
         smootherRef.current.kill();
         smootherRef.current = null;
@@ -173,7 +200,7 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
       {loading && (
         <div className="absolute flex-col gap-5 w-full h-full z-50 flex items-center justify-center bg-amber-900/10 backdrop-blur-2xl">
           <span className="loader"></span>
-          <span class="loaderBar"></span>
+          <span className="loaderBar"></span>
         </div>
       )}
       {!loading && (
@@ -221,8 +248,20 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
                 {" "}
                 About PDM{" "}
               </a>
-              <button onClick={() => {navigate("/login")}} className="bg-amber-400 py-[0.5rem] px-[1.4rem] text-white font-semibold rounded-sm shadow-amber-950/50 shadow-md cursor-pointer hover:scale-105 duration-300">
-                Log In
+              <button
+                onClick={() => {
+                  if (guest) {
+                    navigate("/login");
+                  } else {
+                    localStorage.setItem("studentId", "PDM-0000-000000");
+                    localStorage.setItem("role", "Guest");
+                    setGuest(true);
+                    navigate("/");
+                  }
+                }}
+                className="bg-amber-400 py-[0.5rem] px-[1.4rem] text-white font-semibold rounded-sm shadow-amber-950/50 shadow-md cursor-pointer hover:scale-105 duration-300"
+              >
+                {guest ? "Log In" : "Log Out"}
               </button>
             </div>
           </div>
@@ -273,7 +312,10 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
             </div>
 
             {/* Mission and Vission */}
-            <div id="about" className="w-full flex flex-row justify-between gap-[3vw] p-[2vw]">
+            <div
+              id="about"
+              className="w-full flex flex-row justify-between gap-[3vw] p-[2vw]"
+            >
               <div className="main-image flex flex-col w-[55%] rounded-md aspect-[1] p-[4vw] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/mainSection.jpg)] bg-left bg-no-repeat bg-cover">
                 <div className="flex flex-col w-[80%] h-fit overflow-hidden">
                   <h1 className="feature-text typo-header-semibold text-amber-500">

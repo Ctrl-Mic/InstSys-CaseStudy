@@ -5,17 +5,15 @@ import FaceScanner from "../utils/faceScanner";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
-function Login({ goRegister, goDashboard }) {
-  const [loading, setLoading] = useState(false); // loading until backend is ready
-  const [form, setForm] = useState({
-    studentId: "",
-    email: "",
-    password: "",
-  });
-
-  // const EXPRESS_API = import.meta.env.VITE_EXPRESS_API;
-  const EXPRESS_API = "http://localhost:5000";
+function Login({ goRegister }) {
+  const EXPRESS_API = import.meta.env.VITE_EXPRESS_API;
   const PYTHON_API = import.meta.env.VITE_PYTHON_API;
+  
+  const [loading, setLoading] = useState(false); // loading until backend is ready
+  const [form, setForm] = useState({studentId: "",email: "",password: "",});
+
+
+  const navigate = useNavigate();
 
   const [faceOn, setFaceOn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -113,7 +111,7 @@ function Login({ goRegister, goDashboard }) {
       const result = await res.json();
       console.log("Refreshed Collections", result);
 
-      goDashboard();
+      navigate("/dashboard");
     } catch (err) {
       console.error("❌ Error refreshing collections:", err);
       showPopup("error", "Failed to refresh collections");
@@ -173,11 +171,12 @@ function Login({ goRegister, goDashboard }) {
       )}
 
       {!loading && (
-        <motion.div 
-          initial={{ opacity: 0.6 }}   // Start below, invisible
-          animate={{ opacity: 1 }}    // Slide up & fade in
-          transition={{ duration: 0.5, ease: "easeOut" }} 
-          className="screen p-10 w-screen h-screen bg-[linear-gradient(to_bottom,rgba(121,44,26,0.8),rgba(51,13,3,1)),url('/images/PDM-Facade.png')] bg-cover bg-center flex flex-row justify-between items-center">
+        <motion.div
+          initial={{ opacity: 0.6 }} // Start below, invisible
+          animate={{ opacity: 1 }} // Slide up & fade in
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="screen p-10 w-screen h-screen bg-[linear-gradient(to_bottom,rgba(121,44,26,0.8),rgba(51,13,3,1)),url('/images/PDM-Facade.png')] bg-cover bg-center flex flex-row justify-between items-center"
+        >
           {/* Left Card */}
           <div className="w-full h-screen flex flex-col gap-2 justify-center items-center">
             <div className="logo bg-[url('/images/PDM-Logo.svg')] bg-contain w-[30vw] h-[30vw]"></div>
@@ -265,12 +264,14 @@ function Login({ goRegister, goDashboard }) {
 
             {/* REGISTER BUTTON */}
             <button
-                type="button"
-                className="font-sans font-medium underline text-[clamp(0.6rem,1.3vw,1.2rem)] cursor-pointer"
-                onClick={() => {navigate("/register")}}
-              >
-                Create Account →
-              </button>
+              type="button"
+              className="font-sans font-medium underline text-[clamp(0.6rem,1.3vw,1.2rem)] cursor-pointer"
+              onClick={() => {
+                navigate("/register");
+              }}
+            >
+              Create Account →
+            </button>
           </motion.div>
           {/* Popups */}
           <Popup
