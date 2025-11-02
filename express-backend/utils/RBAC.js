@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import bcrypt from "bcrypt";
 import { fileURLToPath } from "url";
+import { connection, register } from "../src/modules/modules.connection.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,17 +77,32 @@ export function createStudentAccount({
 
   const assignedRole = getRoleFromCourse(course);
 
-  students[studentId] = {
-    studentName: fullName,
-    year,
-    course,
-    email,
+  // students[studentId] = {
+  //   studentName: fullName,
+  //   year,
+  //   course,
+  //   email,
+  //   password: hashedPassword,
+  //   role: assignedRole,
+  //   faceDescriptor, // Save face descriptor
+  //   imagePath, // Save image file path
+  // };
+
+  const userDoc = {
+    _id: studentId,
+    fullname: fullName,
+    year: year,
+    course: course,
+    email: email,
     password: hashedPassword,
     role: assignedRole,
-    faceDescriptor, // Save face descriptor
-    imagePath, // Save image file path
-  };
-  saveStudents(students);
+    faceDescriptor: faceDescriptor,
+    image: fs.readFileSync(imagePath),
+  }
+
+  connection(); 
+  register(userDoc);
+  fs.unlinkSync(imagePath);
 
   return {
     message: "Student account created successfully",
