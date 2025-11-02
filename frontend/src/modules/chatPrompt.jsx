@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import "../css/chatPrompt.css";
 import FileUpload from "../components/FileUpload";
 import AiChat from "./aiChat";
@@ -15,6 +16,7 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState(initialView);
   const [aiText, setAiText] = useState("");
+  const navigate = useNavigate();
 
   // =============================
   // Fetch student data on load
@@ -288,7 +290,9 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
               </div>
 
               <div
-                onClick={goDashboard}
+                onClick={() => {
+                  navigate("/dashboard")
+                }}
                 className="w-full flex items-center h-[5vh] hover:scale-103 transition-all duration-300 cursor-pointer"
               >
                 <button onClick={goDashboard}>

@@ -1,16 +1,44 @@
-import { use, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import "../css/dashboard.css";
 import CreatingAccount from "../components/creatingAccount.jsx";
 import UsingApp from "../components/usingApp.jsx";
 import NavigatingApp from "../components/navigatingApp.jsx";
 import CourseDisplay from "./courseDisplay.jsx";
 import PopupGuide from "../utils/popupGuide.jsx";
+import AboutPDM from "./about.jsx";
+import { useNavigate } from "react-router-dom";
+import Objectives from "./objectives.jsx";
+import { useGSAP } from "@gsap/react";
+import { ScrollTrigger, ScrollSmoother } from "gsap/all";
+import gsap from "gsap";
+
+gsap.registerPlugin(ScrollSmoother, ScrollTrigger);
 
 function Dashboard({ goChat, goAccounts, goLogin }) {
+  const smootherRef = useRef(null);
+  const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(1);
   const [activeView, setActiveView] = useState(1);
   const [scrollPage, setScrollPage] = useState("home");
   const [showPopup, setShowPopup] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkServer = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:5000/health");
+        if (res.ok) {
+          setLoading(false); // backend is ready → hide loading
+        } else {
+          setTimeout(checkServer, 200); // retry after 1s
+        }
+      } catch {
+        setTimeout(checkServer, 200); // retry after 1s
+      }
+    };
+
+    checkServer();
+  }, []);
 
   useEffect(() => {
     if (!scrollPage) return;
@@ -18,13 +46,13 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
     const target = document.getElementById(scrollPage);
     if (!target) return;
 
-    const offset = 80;
+    const offset = 150;
     const elementPosition = target.getBoundingClientRect().top + window.scrollY;
     const offsetPosition = elementPosition - offset;
 
     const start = window.scrollY;
     const distance = offsetPosition - start;
-    const duration = 300;
+    const duration = 500;
     let startTime = null;
 
     function animation(currentTime) {
@@ -69,34 +97,119 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
     localStorage.removeItem("studentId"); // clear saved session
     goLogin(); // go back to Login page
   };
+
+  useGSAP(() => {
+    if (loading) return;
+
+    // ✅ Create ScrollSmoother if not exists
+    if (!smootherRef.current) {
+      smootherRef.current = ScrollSmoother.create({
+        wrapper: "#smooth-wrapper",
+        content: "#smooth-content",
+        smooth: 2,
+        effects: true,
+      });
+    }
+
+    // ✅ GSAP Animations
+    gsap.from(".navigation-bar", { y: -50, duration: 0.7, ease: "circ" });
+    gsap.from(".hero-text", {
+      yPercent: 130,
+      duration: 1,
+      stagger: 0,
+      ease: "circ",
+    });
+
+    gsap.from(".course-text", {
+      x: -1000,
+      duration: 1,
+      stagger: 0.5,
+      scrollTrigger: {
+        trigger: ".course-text",
+        start: "top 100%",
+      },
+    });
+
+    gsap.from(".feature-text", {
+      x: -1000,
+      duration: 1.5,
+      stagger: 0.2,
+      ease: "circ.Out",
+      scrollTrigger: {
+        trigger: ".main-image",
+        start: "top 100%",
+      },
+    });
+
+    // ✅ Refresh after animation + smoother init
+    ScrollTrigger.refresh();
+
+    return () => {
+      // ✅ Kill ScrollTrigger animations
+      ScrollTrigger.getAll().forEach((t) => t.kill());
+      gsap.killTweensOf(
+        ".navigation-bar, .hero-text, .course-text, .feature-text"
+      );
+
+      // ✅ Destroy smoother so it can rebuild
+      if (smootherRef.current) {
+        smootherRef.current.kill();
+        smootherRef.current = null;
+      }
+    };
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading) return;
+    const smoother = ScrollSmoother.create({
+      wrapper: "#smooth-wrapper",
+      content: "#smooth-content",
+      smooth: 5,
+      effects: true,
+    });
+  }, [loading]);
   return (
     <>
-      <div className="flex flex-col">
-        {/* {showPopup && (
-        <div className="w-full h-full absolute bg-black/70 z-30 flex justify-center items-center">
-          <PopupGuide onClose={() => setShowPopup(false)} />
-        </div> */}
-        {/* )} */}
-        <div className="w-full h-fit py-2 flex flex-col bg-white items-center fixed border-b-12 border-[#FFDB0D] z-10">
-          <div className="w-full h-full flex justify-between px-4 items-center">
-            <div className=" flex gap-8 text-[clamp(0.5rem,1.2vw,1.2rem)] font-medium">
+      {loading && (
+        <div className="absolute flex-col gap-5 w-full h-full z-50 flex items-center justify-center bg-amber-900/10 backdrop-blur-2xl">
+          <span className="loader"></span>
+          <span class="loaderBar"></span>
+        </div>
+      )}
+      {!loading && (
+        <div id="smooth-wrapper" className="flex flex-col bg-[rgb(51,13,3)">
+          {/* Navigation Bar */}
+          <div className="navigation-bar px-[1rem] py-[0.5rem] justify-between w-full h-fit flex flex-row bg-white/70 backdrop-blur-sm items-center fixed border-b-2 border-amber-400 z-10">
+            <div className="flex items-center gap-1">
+              <img
+                src="./images/PDM-Logo.svg"
+                alt="PDM Logo"
+                className="w-[5%]"
+              />
+              <h1 className="typo-subheader-semibold">
+                <span className="text-amber-300">Information</span>System
+              </h1>
+            </div>
+            <div className="flex items-center gap-5 typo-buttons-semibold">
               <a
-                href="#Home"
+                href="#home"
                 onClick={(e) => {
                   e.preventDefault();
                   setScrollPage("home");
                 }}
               >
-                Home
+                {" "}
+                Home{" "}
               </a>
               <a
-                href="#Programs"
+                href="#Courses"
                 onClick={(e) => {
                   e.preventDefault();
-                  setScrollPage("programs");
+                  setScrollPage("courses");
                 }}
               >
-                Programs
+                {" "}
+                Courses{" "}
               </a>
               <a
                 href="#About"
@@ -105,137 +218,138 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
                   setScrollPage("about");
                 }}
               >
-                About Pdm
+                {" "}
+                About PDM{" "}
               </a>
+              <button onClick={() => {navigate("/login")}} className="bg-amber-400 py-[0.5rem] px-[1.4rem] text-white font-semibold rounded-sm shadow-amber-950/50 shadow-md cursor-pointer hover:scale-105 duration-300">
+                Log In
+              </button>
             </div>
+          </div>
 
-            <div className="bg-[url('/images/PDM-Logo.svg')] bg-contain bg-center bg-no-repeat w-[4%] aspect-square"></div>
-
-            <div className="flex flex-row gap-2 h-12">
-              <div className="flex items-center gap-8 text-[clamp(0.5rem,1.2vw,1.2rem)] h-full font-medium">
-                <button
-                  onClick={handleLogout}
-                  className="cursor-pointer hover:underline"
-                >
-                  Log Out
-                </button>
-                <a
-                  onClick={goAccounts}
-                  className="cursor-pointer hover:underline"
-                >
-                  Accounts
-                </a>
+          <div id="smooth-content">
+            {/* Hero Section */}
+            <div
+              id="home"
+              className="flex w-full h-[100vh] pt-[5%] bg-[linear-gradient(to_bottom,rgba(121,44,26,0.8),rgba(51,13,3,1)),url('/images/PDM-Facade.png')] bg-cover bg-center bg-no-repeat"
+            >
+              <div className="flex flex-col gap-[5%] h-full items-center justify-center w-full pb-[10vw]">
+                <div className="flex flex-col items-center">
+                  <div className="overflow-clip pb-[1%]">
+                    <h1 className="hero-text text-yellow-400 text-center text-[clamp(2.5rem,6vw,9rem)] font-medium font-serif leading-[100%]">
+                      Learning Made Smarter
+                    </h1>
+                  </div>
+                  <div className="overflow-clip">
+                    <h2 className="hero-text text-white text-[clamp(0.7rem,1.8vw,5rem)] font-medium ">
+                      Pambayang Dalubhasaan ng Marilao
+                    </h2>
+                  </div>
+                </div>
+                <div className="flex gap-7 w-full justify-center">
+                  <button
+                    onClick={() => {
+                      navigate("/chatPrompt");
+                    }}
+                    className="text-amber-950 cursor-pointer w-[12vw] py-[0.5rem] font-bold text-[clamp(0.5rem,1.3vw,2rem)] rounded-md bg-amber-400 shadow-md shadow-black hover:scale-105 transition-all duration-300"
+                  >
+                    Try AI
+                  </button>
+                </div>
               </div>
-              <div className="bg-[url('/navIco/profile-circle.png')] bg-contain bg-center bg-no-repeat w-[20%] aspect-square"></div>
             </div>
-          </div>
-        </div>
-        <div
-          id="home"
-          className="flex w-full h-[90vh] pt-[5%] bg-[linear-gradient(to_bottom,rgba(121,44,26,0.7),rgba(105,34,16,0.9)),url('/images/PDM-Facade.png')] bg-cover bg-center bg-no-repeat"
-        >
-          <div className="flex flex-col h-full items-center justify-center w-full pb-60">
-            <div className="text-yellow-400 text-center text-[clamp(5rem,6vw,9rem)] w-fit font-medium font-serif leading-[100%] mb-7">
-              Learning Made Smarter
+            <div className="w-full flex flex-col gap-5 bg-[rgb(51,13,3)] h-fit p-[2vw]">
+              <div className="flex flex-col p-[1vw] border-l-5 overflow-hidden border-amber-400 text-white">
+                <h1 className="course-text typo-header-semibold">
+                  Offereded Programs
+                </h1>
+                <h2 className="course-text typo-content-semibold">
+                  Explore our most popular courses designed by industry experts
+                </h2>
+              </div>
+              <div id="courses">
+                <CourseDisplay />
+              </div>
             </div>
-            <div className="text-white text-[clamp(1rem,1.8vw,5rem)] mb-10 font-medium ">
-              Pambayang Dalubhasaan ng Marilao
-            </div>
-            <div className="flex gap-7 w-full justify-center">
-              <button
-                onClick={() => setScrollPage("guide")}
-                className="text-white cursor-pointer w-[10vw] py-[1%] font-bold text-[clamp(1rem,1.3vw,2rem)] rounded-md border-white border-2 shadow-md shadow-black hover:scale-105 transition-all duration-300"
-              >
-                User Guide
-              </button>
-              <button
-                onClick={goChat}
-                className="text-amber-950 cursor-pointer w-[10vw] py-[1%] font-bold text-[clamp(1rem,1.3vw,2rem)] rounded-md bg-amber-400 shadow-md shadow-black hover:scale-105 transition-all duration-300"
-              >
-                Try AI
-              </button>
-            </div>
-          </div>
-        </div>
-        <div id="guide" className=" bg-white w-full h-[100vh] flex flex-col">
-          <div className="flex w-full items-center justify-center h-[35vh] mt-[-6%]">
-            {buttons.map((btn, index) => (
-              <button
-                key={btn.id}
-                onClick={() => {
-                  setActiveIndex(index);
-                  setActiveView(index);
-                }}
-                className={`
-                w-[23%] 
-                h-fit
-                p-2
-                duration-300 
-                transform 
-                ${
-                  activeIndex === index
-                    ? "scale-105 z-1 bg-amber-500 text-white shadow-2xl rounded-sm"
-                    : "scale-100 bg-white shadow-lg"
-                } 
-                hover:scale-105
-                flex flex-col items-center justify-center
-              `}
-              >
-                <img
-                  src={activeIndex === index ? btn.activeImg : btn.defaultImg}
-                  alt={btn.title}
-                  className="w-40 h-40 object-contain mb-2"
-                  draggable={false}
-                />
-                <div className="flex flex-col font-sans">
-                  <h1 className="text-[clamp(1rem,2vw,3rem)] font-bold">
-                    {btn.title}
+
+            {/* Mission and Vission */}
+            <div id="about" className="w-full flex flex-row justify-between gap-[3vw] p-[2vw]">
+              <div className="main-image flex flex-col w-[55%] rounded-md aspect-[1] p-[4vw] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/mainSection.jpg)] bg-left bg-no-repeat bg-cover">
+                <div className="flex flex-col w-[80%] h-fit overflow-hidden">
+                  <h1 className="feature-text typo-header-semibold text-amber-500">
+                    Information System
                   </h1>
-                  <h2 className="text-[clamp(0.6rem,1vw,2rem)] ">
-                    {btn.subtitle}
+                  <h2 className="feature-text typo-content-regular text-white text-justify">
+                    This Localized AI Information System is designed to make
+                    school processes smarter, faster, and easier. With
+                    intelligent guidance, real-time assistance, and a
+                    user-friendly interface, everyone can quickly access
+                    information, explore system features, and get support
+                    whenever they need it — all in just a ew clicks.
                   </h2>
                 </div>
-                {btn.content}
-              </button>
-            ))}
+              </div>
+
+              <div className="w-[45%] flex flex-col gap-[3vw]">
+                <div className="flex flex-col w-full p-[4vw] rounded-md aspect-square bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/mission.jpg)] bg-center bg-no-repeat bg-cover">
+                  <div className="flex flex-col w-[100%] h-fit overflow-hidden">
+                    <h1 className="feature-text typo-header-semibold text-amber-500">
+                      Mission
+                    </h1>
+                    <h2 className="feature-text typo-content-regular text-white text-justify">
+                      Cognizant of the importance of contributing to the
+                      realization of national development goals and right of
+                      every citizen to quality education, PDM commit itself to
+                      the provision of quality education, and mold its students
+                      into productive and responsible citizens who are imbued
+                      with virtues, aware of their national heritage and proud
+                      of their local culture.
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="flex flex-col w-full p-[4vw] rounded-md aspect-square bg-[linear-gradient(to_bottom,rgba(0,0,0,0.8),rgba(0,0,0,0.3)),url(./images/vision.jpg)] bg-no-repeat bg-cover">
+                  <div className="flex flex-col w-[100%] h-fit overflow-hidden">
+                    <h1 className="feature-text typo-header-semibold text-amber-500">
+                      Vision
+                    </h1>
+                    <h2 className="feature-text typo-content-regular text-white text-justify">
+                      The Pambayang Dalubhasaan ng Marilao (PDM), one of the
+                      premier higher educational institutions in the region in
+                      providing quality subsidized tertiary education and
+                      industry training programs committed to produce competent,
+                      competitive, capable, and skillful graduates who excel in
+                      their chosen field.
+                    </h2>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              id="objectives"
+              className="w-full p-[3vw] flex justify-center bg-amber-500"
+            >
+              <Objectives></Objectives>
+            </div>
+            <div className="w-full flex justify-center">
+              <AboutPDM></AboutPDM>
+            </div>
           </div>
 
-          <div className="w-full h-[60vh] relative">
-            <div
-              className={`${
-                activeView === 0 ? "flex" : "hidden"
-              } w-full h-full justify-center items-center`}
-            >
-              <CreatingAccount />
-            </div>
-            <div
-              className={`${
-                activeView === 1 ? "flex" : "hidden"
-              } w-full h-full justify-center items-center`}
-            >
-              <UsingApp />
-            </div>
-            <div
-              className={`${
-                activeView === 2 ? "flex" : "hidden"
-              } w-full h-full justify-center items-center`}
-            >
-              <NavigatingApp />
+          {/* <div
+            id="courses"
+            className=" flex flex-row items-center justify-center shadow-lg shadow-gray-400 bg-amber-500 w-full h-90 z-1"
+          >
+            <div className="w-[80%] h-[110%] shadow-lg shadow-gray-700 bg-amber-900">
+              <CourseDisplay />
             </div>
           </div>
+
+          <div id="about" className="w-full h-[100vh] bg-white">
+            <AboutPDM></AboutPDM>
+          </div> */}
         </div>
-
-        <div
-          id="programs"
-          className=" flex flex-row items-center justify-center shadow-lg shadow-gray-400 bg-amber-500 w-full h-90 z-1"
-        >
-          <div className="w-[80%] h-[110%] shadow-lg shadow-gray-700 bg-amber-900">
-            <CourseDisplay />
-          </div>
-        </div>
-
-        <div id="about" className="w-full h-[100vh] bg-white"></div>
-      </div>
+      )}
     </>
   );
 }
