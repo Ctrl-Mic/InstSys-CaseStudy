@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { userSchema, fileSchema } from '../components/constructor.js';
+import { connect } from 'http2';
 
 const url = "mongodb://localhost:27017/school_system";
 
@@ -17,7 +18,7 @@ export async function connection() {
 
     console.log("Database connection successful");
   
-    const db = mongoose.connection.db;
+    return db = mongoose.connection.db;
 
   } catch (err) {
     console.error("Database connection failed:", err.message);
@@ -47,6 +48,8 @@ export async function register(userData) {
 
     console.error("Error registering user:", error.message);
     return { status: 500, message: "Internal Server Error" };
+  } finally {
+    
   }
 }
 

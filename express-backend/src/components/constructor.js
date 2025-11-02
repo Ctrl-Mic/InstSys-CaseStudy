@@ -1,14 +1,15 @@
-import path from "path";
 import mongoose from "mongoose";
 
 export const userSchema = new mongoose.Schema({
   _id: { type: String, required: true },
-  student_name: { type: String, required: true },
+  fullname: { type: String, required: true },
   year: { type: String, required: true },
   course: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, required: true },
+  faceDescriptor: { type: Array, required: true },
+  image: { type: Buffer, required: true },
 })
 
 export const fileSchema = new mongoose.Schema({
