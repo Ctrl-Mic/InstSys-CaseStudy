@@ -2,6 +2,8 @@ import React, { useState, useRef } from "react";
 import '../css/input.css';
 
 
+/* This code defines a React functional component called `FileModal` that represents a modal for
+uploading and attaching files. Here's a breakdown of what the code is doing: */
 export default function FileModal({ isOpen, onClose, onSubmit, studentData }) {
   const [file, setFile] = useState(null);
   const [folder, setFolder] = useState("");
@@ -18,12 +20,22 @@ export default function FileModal({ isOpen, onClose, onSubmit, studentData }) {
   };
 
   const handleSubmit = async (e) => {
-    console.log(folder);
     e.preventDefault();
     if (file && folder) {
-      setLoading(true)
-      await onSubmit(file, folder); // ✅ pass both values to parent
-      setLoading(false)
+      // Determine subfolder based on file extension
+      const ext = file.name.toLowerCase().endsWith('.xlsx') ? '_excel' 
+            : file.name.toLowerCase().endsWith('.pdf') ? '_pdf'
+            : file.name.toLowerCase().endsWith('.json') ? '_json'
+            : '';
+      
+      // Combine base folder with extension suffix
+      const targetFolder = `${folder}${ext}`;
+      
+      console.log("Submitting to folder:", targetFolder);
+      
+      setLoading(true);
+      await onSubmit(file, targetFolder);
+      setLoading(false);
       onClose();
     } else {
       alert("Please choose a file and a folder ❌");
@@ -79,15 +91,15 @@ export default function FileModal({ isOpen, onClose, onSubmit, studentData }) {
               className="py-2 rounded-2xl border px-2"
             >
               <option value="" disabled>Select Folder</option>
-              {studentData?.role?.toLowerCase() === "faculty" ? (
-                <option value="students">Students</option>
-              ) : (
-                <>
-                  <option value="faculty">Faculty</option>
-                  <option value="students">Students</option>
-                  <option value="admin">Admin</option>
-                </>
-              )}
+              <option value="students_data">Students Data</option>
+              <option value="non_teaching_faculty">Non-Teaching Faculty</option>
+              <option value="teaching_faculty">Teaching Faculty</option>
+              <option value="cor">COR</option>
+              <option value="faculty_schedule">Faculty Schedule</option>
+              <option value="grades">Grades</option>
+              <option value="admin">Admin</option>
+              <option value="curriculum">Curriculum</option>
+              <option value="generalinfo">General Info</option>
             </select>
 
             {/* Preview */}

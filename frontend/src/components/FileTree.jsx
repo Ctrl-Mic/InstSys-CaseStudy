@@ -4,7 +4,7 @@ import FileDisplayCard from "./FileDisplayCard";
 function FileTree({ files, folderName, onDelete }) {
   return (
     <div className="file-tree">
-      {folderName && <h2 className="font-bold text-lg">{folderName}</h2>}
+      {folderName && <h2 className="font-bold text-lg">{folderName.replace(/_/g, " ")}</h2>}
       <div className="flex flex-wrap gap-4">
         {files.files &&
           files.files.map((file) => (

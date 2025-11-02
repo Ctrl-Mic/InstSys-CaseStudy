@@ -4,6 +4,20 @@ import FileModal from "./fileModal.jsx";
 import Popup from "../utils/popups.jsx";
 import FileTree from "./FileTree";
 
+/* The above code is a React component named `FileUpload` that handles file uploads to a backend
+server. Here is a summary of what the code does: */
+const VALID_FOLDERS = [
+  "students_data",
+  "non_teaching_faculty",
+  "teaching_faculty",
+  "cor",
+  "faculty_schedule",
+  "grades",
+  "admin",
+  "curriculum",
+  "generalinfo",
+];
+
 function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
   const fileInputRef = useRef(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -62,19 +76,21 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
   const handleFileChange = async (file, folder) => {
     if (!file) return;
 
+    console.log("Uploading file:", file.name);
+    console.log("Target folder:", folder);
+
     // ✅ Allowed file extensions
     const allowedExtensions = [".xlsx", ".json", ".pdf"];
 
     // Check if the file is one of the allowed types
     if (!allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
       alert("Only Excel (.xlsx), JSON (.json), and PDF (.pdf) files are allowed ❌");
-      e.target.value = null;
       return;
     }
 
-    // 👉 Ask where to upload
-    if (!folder || !["faculty", "students", "admin"].includes(folder.toLowerCase())) {
-      alert("❌ Invalid choice. Please select: faculty, students, or admin.");
+    // 👉 Validate folder name
+    if (!folder || !VALID_FOLDERS.includes(folder.toLowerCase())) {
+      alert(`❌ Invalid choice. Please select one of: ${VALID_FOLDERS.join(", ")}`);
       return;
     }
 
@@ -83,8 +99,10 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("folder", folder.toLowerCase()); // ✅ send folder choice
+    formData.append("category", "test")
 
     try {
+      // Step 1: Upload to MongoDB
       let response = await fetch("http://127.0.0.1:5000/v1/upload/file", {
         method: "POST",
         body: formData,
@@ -92,7 +110,31 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
 
       let result = await response.json();
 
-      // Handle duplicates
+      if (!response.ok) {
+        console.error("MongoDB upload failed:", result.message);
+        showPopup("error", "❌ MongoDB upload failed");
+        return;
+      }
+
+      console.log("MongoDB upload successful:", result);
+
+      // Step 2: Upload to Local Storage
+      response = await fetch("http://127.0.0.1:5000/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      result = await response.json();
+
+      if (!response.ok) {
+        console.error("Local upload failed:", result.message);
+        showPopup("error", "❌ Local upload failed");
+        return;
+      }
+
+      console.log("Local upload successful:", result);
+
+      // Step 3: Handle duplicates (if any)
       if (response.status === 409 && result.duplicate) {
         const confirm = window.confirm(result.message);
         if (confirm) {
@@ -110,18 +152,19 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
           onFileUpload(file, { success: false, message: "Upload cancelled ❌" });
         }
         if (onUploadStatus) onUploadStatus("end", file);
-        fetchFiles(); 
+        fetchFiles();
         return;
       }
 
+      // Step 4: Finalize upload
       onFileUpload(file, { success: true, message: "Upload complete ✅" });
-        showPopup("success", "✅ Upload complete ");
-        
-        fetchFiles(); 
-      } catch (error) {
-        console.error("Upload failed:", error);
-        onFileUpload(file, { success: false, message: "Upload failed ❌" });
-        showPopup("error", "❌ Upload failed ")
+      showPopup("success", "✅ Upload complete");
+
+      fetchFiles();
+    } catch (error) {
+      console.error("Upload failed:", error);
+      onFileUpload(file, { success: false, message: "Upload failed ❌" });
+      showPopup("error", "❌ Upload failed");
     }
 
     if (onUploadStatus) onUploadStatus("end", file);
@@ -153,57 +196,12 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
         <h1 className="self-start ml-6 mb-2 text-[clamp(1.8rem,1.8vw,2.5rem)] font-sans font-medium">
           FILES UPLOADED
         </h1>
-        <div className="flex flex-col justify-between gap-2 w-[80vw] h-[80%]">
-          <div className="rounded-xl w-full h-[30%]">
-            <h1 className="text-[clamp(0.6rem,1.3vw,2rem)] font-sans font-medium">
-              Faculties and Curriculum
-            </h1>
-            <div className="flex 0 w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide" 
-              onWheel={(e) => {
-                if (e.deltaY !== 0) {
-                  e.currentTarget.scrollLeft += e.deltaY;
-                }
-              }}>
-              {/* Display the files in the UI for Faculties */}
-              {(uploadedFiles.faculty || []).map((file) => (
-                <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "faculty")} />
-              ))}
-            </div>
-          </div>
-          <div className="rounded-xl w-full h-[30%]">
-            <h1 className="text-[clamp(0.6rem,1.3vw,2rem)] font-sans font-medium" 
-            >
-              Class and Student Record
-            </h1>
-            <div className="flex w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide"
-            onWheel={(e) => {
-              if (e.deltaY !==0) {
-                e.currentTarget.scrollLeft += e.deltaY;
-              }
-            }}>
-              {/* For Students */}
-              {(uploadedFiles.students || []).map((file) => (
-                <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "students")} />
-              ))}
-            </div>
-          </div>
-          <div className="rounded-xl w-full h-[30%]" >
-            <h1 className="text-[clamp(0.6rem,1.3vw,2rem)] font-sans font-medium">
-              Admin and Employees
-            </h1>
-            <div className="flex  w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide" 
-            onWheel={(e) => {
-              if (e.deltaY !==0) {
-                e.currentTarget.scrollLeft += e.deltaY;
-              }
-            }}>
-              {/* For Admins */}
-              {(uploadedFiles.admin || []).map((file) => (
-                <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "admin")} />
-              ))}
-            </div>
-          </div>
+        
+        <div className="overflow-auto h-[75%] w-[90%] rounded-lg p-4 relative scrollbar-hide">
+          {/* <h1 className="text-2xl font-bold mb-4">Uploaded Files</h1> */}
+          <FileTree files={uploadedFiles} onDelete={handleDeleteFile} />
         </div>
+
         {/* Add Button */}
         <FileModal 
           isOpen={isModalOpen} 
@@ -233,10 +231,6 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
           message={popup.message}
           onClose={() => setPopup({ show: false, type: "", message: "" })}
         />
-      </div>
-      <div className="file-upload">
-        <h1 className="text-2xl font-bold mb-4">Uploaded Files</h1>
-        <FileTree files={uploadedFiles} onDelete={handleDeleteFile} />
       </div>
     </>
   );

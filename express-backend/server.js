@@ -1,3 +1,5 @@
+/* This JavaScript code is setting up an Express server with various routes and functionalities. Here's
+a breakdown of what the code is doing: */
 import express from "express";
 import cors from "cors";
 import loginRoute from "./routes/loginRoute.js";
@@ -11,6 +13,7 @@ import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
 import Filemeta from './src/utils/cons.js'
 import path from "path";
 import multer from 'multer';
+
 const memoryUpload = multer({ storage: multer.memoryStorage() });
 
 const app = express();
@@ -123,6 +126,14 @@ app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
     }
   }
 );
+
+app.use((err, req, res, next) => {
+  console.error("Global error handler:", err);
+  res.status(500).json({
+    error: err.message || "Internal Server Error",
+    details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
