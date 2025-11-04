@@ -44,6 +44,9 @@ function Register({ goLogin }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState("");
 
+  const EXPRESS_API = import.meta.env.VITE_EXPRESS_API;
+  const PYTHON_API = import.meta.env.VITE_PYTHON_API;
+
   // ------------------------------
   // Password Utilities
   // ------------------------------
@@ -95,56 +98,59 @@ function Register({ goLogin }) {
     setFile(selectedFile);
 
     const reader = new FileReader();
-reader.onload = async (e) => {
-  const imageSrc = e.target.result;
-  setPreview(imageSrc);
+    reader.onload = async (e) => {
+      const imageSrc = e.target.result;
+      setPreview(imageSrc);
 
-  console.log("🟢 Starting face detection debug sequence...");
+      console.log("🟢 Starting face detection debug sequence...");
 
-  try {
-    // Step 1: Check model availability
-    console.log("🔍 Checking if models are loaded:", faceapi.nets);
+      try {
+        // Step 1: Check model availability
+        console.log("🔍 Checking if models are loaded:", faceapi.nets);
 
-    // Step 2: Fetch the image
-    const img = await faceapi.fetchImage(imageSrc);
-    console.log("🖼️ Image fetched:", img.width, "x", img.height);
+        // Step 2: Fetch the image
+        const img = await faceapi.fetchImage(imageSrc);
+        console.log("🖼️ Image fetched:", img.width, "x", img.height);
 
-    // Step 3: Confirm models
-    const modelsLoaded =
-      faceapi.nets.ssdMobilenetv1.params ||
-      faceapi.nets.tinyFaceDetector.params;
-    console.log("✅ Models loaded in memory:", !!modelsLoaded);
+        // Step 3: Confirm models
+        const modelsLoaded =
+          faceapi.nets.ssdMobilenetv1.params ||
+          faceapi.nets.tinyFaceDetector.params;
+        console.log("✅ Models loaded in memory:", !!modelsLoaded);
 
-    // Step 4: Try detection
-    console.log("⚙️ Running detectSingleFace...");
-    const detection = await faceapi
-      .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
-      .withFaceLandmarks()
-      .withFaceDescriptor();
+        // Step 4: Try detection
+        console.log("⚙️ Running detectSingleFace...");
+        const detection = await faceapi
+          .detectSingleFace(
+            img,
+            new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 })
+          )
+          .withFaceLandmarks()
+          .withFaceDescriptor();
 
-    if (!detection) {
-      console.warn("❌ No face detected! Possible reasons:");
-      console.warn("- Image might be too dark or small");
-      console.warn("- Face orientation may be off (sideways/tilted)");
-      console.warn("- Model path incorrect or not initialized");
-      showPopup("error", "⚠️ No face detected in image. Please try again.");
-      setDescriptor([0]); // Set descriptor to [0] instead of null for testing
-      return;
-    }
+        if (!detection) {
+          console.warn("❌ No face detected! Possible reasons:");
+          console.warn("- Image might be too dark or small");
+          console.warn("- Face orientation may be off (sideways/tilted)");
+          console.warn("- Model path incorrect or not initialized");
+          showPopup("error", "⚠️ No face detected in image. Please try again.");
+          setDescriptor([0]); // Set descriptor to [0] instead of null for testing
+          return;
+        }
 
-    // Step 5: Output descriptor
-    console.log("✅ Face detected!");
-    console.log("🧩 Descriptor length:", detection.descriptor.length);
-    console.log("📊 Descriptor sample:", detection.descriptor.slice(0, 10));
+        // Step 5: Output descriptor
+        console.log("✅ Face detected!");
+        console.log("🧩 Descriptor length:", detection.descriptor.length);
+        console.log("📊 Descriptor sample:", detection.descriptor.slice(0, 10));
 
-    setDescriptor(Array.from(detection.descriptor));
-  } catch (err) {
-    console.error("💥 Error during face detection:", err);
-    showPopup("error", "Detection failed: ${err.message}");
-  }
-};
+        setDescriptor(Array.from(detection.descriptor));
+      } catch (err) {
+        console.error("💥 Error during face detection:", err);
+        showPopup("error", "Detection failed: ${err.message}");
+      }
+    };
 
-reader.readAsDataURL(selectedFile);
+    reader.readAsDataURL(selectedFile);
   };
 
   // ------------------------------
@@ -217,7 +223,7 @@ reader.readAsDataURL(selectedFile);
     );
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/register", {
+      const res = await fetch(`${EXPRESS_API}/register`, {
         method: "POST",
         body: formData,
       });
@@ -226,7 +232,7 @@ reader.readAsDataURL(selectedFile);
 
       if (res.ok) {
         setShowSuccess(true);
-        navigate("/login")
+        navigate("/login");
       } else {
         showPopup("error", data.error || "❌ Registration failed.");
       }
@@ -268,7 +274,7 @@ reader.readAsDataURL(selectedFile);
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="flex flex-col md:flex-row w-[90vw] max-w-[1200px] h-auto justify-center gap-6 md:gap-10 items-center px-4 py-6 rounded-xl transition-all duration-300"
         >
-         <div className="flex flex-col items-center gap-5 w-full md:w-fit h-fit overflow-y-auto md:overflow-visible max-h-[80vh] md:max-h-none bg-white/70 border-white border-2 rounded-lg p-6 md:p-10 shadow-gray-100/40 shadow-[3px_3px_2px_#6a7282,_-2px_-2px_2px_#d1d5dc] scrollbar-thin scrollbar-thumb-gray-400/50 scrollbar-track-transparent">
+          <div className="flex flex-col items-center gap-5 w-full md:w-fit h-fit overflow-y-auto md:overflow-visible max-h-[80vh] md:max-h-none bg-white/70 border-white border-2 rounded-lg p-6 md:p-10 shadow-gray-100/40 shadow-[3px_3px_2px_#6a7282,_-2px_-2px_2px_#d1d5dc] scrollbar-thin scrollbar-thumb-gray-400/50 scrollbar-track-transparent">
             <h1 className="font-medium font-sans text-[clamp(1.5rem,2vw,3rem)] text-center">
               Confirm your Account
             </h1>
