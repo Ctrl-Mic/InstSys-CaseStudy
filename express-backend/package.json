@@ -3,14 +3,12 @@
   "version": "1.0.0",
   "description": "Student Database Management System - Backend",
   "main": "utils/main.js",
-  "type": "module",
   "scripts": {
     "start": "node utils/run_system.js",
     "dev": "nodemon utils/run_system.js",
     "test": "node utils/main.js",
     "system": "node utils/run_system.js",
-    "process-excel": "node utils/process_my_excel.js",
-    "start:server": "nodemon server.js"
+    "process-excel": "node utils/process_my_excel.js"
   },
   "keywords": [
     "student",
@@ -21,22 +19,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@mongodb-js/saslprep": "^1.3.2",
-    "axios": "^1.12.2",
-    "bcrypt": "^6.0.0",
-    "cors": "^2.8.5",
     "express": "^5.1.0",
-    "mongodb": "^6.20.0",
-    "mongoose": "^8.19.2",
-    "multer": "^2.0.2",
-    "node-cron": "^2.0.3",
-    "pdf-parse": "^2.4.3",
-    "pdf2json": "^4.0.0",
-    "request": "^2.88.2",
+    "mongodb": "^6.3.0",
+    "pdf-parse": "^1.1.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
     "nodemon": "^3.0.2"
   }
 }
