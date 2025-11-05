@@ -1,12 +1,6 @@
 import React, { useEffect, useState, useRef, use } from "react";
 
-export default function VoiceInput({
-  setInput,
-  micON,
-  sendMessage,
-  toggleMic,
-  mode
-}) {
+export default function VoiceInput({ voiceSubmit, micON, toggleMic, mode }) {
   const [transcript, setTranscript] = useState("");
   const audioRef = useRef(null);
 
@@ -111,23 +105,18 @@ export default function VoiceInput({
             // This way the user can see what they are saying as they speak
             console.log("Transcript:", interimTranscript);
             setTranscript(interimTranscript);
-            setInput(interimTranscript);
-
             // After setting the interim transcript, we check if the result is final
             if (
               event.results[event.results.length - 1].isFinal &&
               interimTranscript.trim() !== ""
             ) {
               console.log("Final transcript, submitting:", interimTranscript);
-              sendMessage(interimTranscript);
+              voiceSubmit(interimTranscript);
               setTranscript("");
-              setInput("");
               interimTranscript = "";
               if (!mode) {
-                // 🧠 Normal mode: stop listening after one message
                 toggleMic();
               } else {
-                // 🎙️ Continuous (Holo) mode: keep listening
                 console.log("Continuous mode active — staying on mic");
               }
             }
@@ -157,9 +146,6 @@ export default function VoiceInput({
         const detectVoice = () => {
           analyser.getByteFrequencyData(dataArray);
           const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          if (avg > 30) {
-            console.log("Voice detected:", avg);
-          }
           requestAnimationFrame(detectVoice); //This would be on loop para constanly ni chcheck niya yung media data
         };
 
@@ -228,7 +214,7 @@ export default function VoiceInput({
   }, [!micON]);
 
   return micON ? (
-    <div className="flex flex-col">
+    <div className="mx-2 rounded-sm flex flex-col h-[3vw] w-[80%] border border-black/20 gap-1 p-1">
       <div
         className={`${
           !mode

@@ -42,9 +42,15 @@ app.get("/health", (req, res) => {
   console.log("Health check endpoint was called.");
 });
 
-app.get("/initialize/AI", (req, res) => {
-  console.log("initializing AI");
-  configPythonAPI();
+app.get("/initialize/AI", async (req, res) => {
+  try {
+    console.log("initializing AI");
+    await configPythonAPI();
+    res.status(200).json({ status: "AI initialized" });
+  } catch (err) {
+    console.error("AI initialization failed:", err);
+    res.status(500).json({ error: "AI initialization failed" });
+  }
 });
 
 app.use("/", loginRoute);
@@ -68,6 +74,8 @@ app.post("/v1/chat/prompt", async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error("Error in /v1/chat/prompt:", error.message);
+    console.error("Error in /v1/chat/prompt:", error);
+    console.log("Request body received:", req.body);
     res.status(500).json({ error: "Failed to fetch data from Python API" });
   }
 });

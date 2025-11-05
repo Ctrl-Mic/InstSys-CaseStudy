@@ -7,12 +7,12 @@ import FileTree from "./FileTree";
 function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
   const fileInputRef = useRef(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [popup, setPopup] = useState({ show: false, type: "success", message: "" });
-  const [uploadedFiles, setUploadedFiles] = useState({
-    faculty: [],
-    students: [],
-    admin: [],
+  const [popup, setPopup] = useState({
+    show: false,
+    type: "success",
+    message: "",
   });
+  const [uploadedFiles, setUploadedFiles] = useState({});
 
   // Fetch files from backend uploads folder
   const fetchFiles = async () => {
@@ -23,11 +23,14 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
       if (data.files) {
         setUploadedFiles(data.files); // Set the nested file structure
       }
+      console.log("Fetched files:", data);
     } catch (err) {
       console.error("Error fetching files:", err);
       setUploadedFiles({});
     }
   };
+
+  
 
   useEffect(() => {
     fetchFiles();
@@ -36,9 +39,14 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
   // Delete file handler
   const handleDeleteFile = (filename, folder) => {
     if (!window.confirm(`Delete "${filename}" from ${folder}?`)) return;
-    fetch(`http://127.0.0.1:5000/delete_upload/${folder}/${encodeURIComponent(filename)}`, {
-      method: "DELETE",
-    })
+    fetch(
+      `http://127.0.0.1:5000/delete_upload/${folder}/${encodeURIComponent(
+        filename
+      )}`,
+      {
+        method: "DELETE",
+      }
+    )
       .then((res) => {
         if (res.ok) fetchFiles();
         else alert("Failed to delete file.");
@@ -66,14 +74,21 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
     const allowedExtensions = [".xlsx", ".json", ".pdf"];
 
     // Check if the file is one of the allowed types
-    if (!allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
-      alert("Only Excel (.xlsx), JSON (.json), and PDF (.pdf) files are allowed ❌");
+    if (
+      !allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
+    ) {
+      alert(
+        "Only Excel (.xlsx), JSON (.json), and PDF (.pdf) files are allowed ❌"
+      );
       e.target.value = null;
       return;
     }
 
     // 👉 Ask where to upload
-    if (!folder || !["faculty", "students", "admin"].includes(folder.toLowerCase())) {
+    if (
+      !folder ||
+      !["faculty", "students", "admin"].includes(folder.toLowerCase())
+    ) {
       alert("❌ Invalid choice. Please select: faculty, students, or admin.");
       return;
     }
@@ -107,139 +122,227 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
           result = await response.json();
           onFileUpload(file, { success: true, message: "File overwritten ✅" });
         } else {
-          onFileUpload(file, { success: false, message: "Upload cancelled ❌" });
+          onFileUpload(file, {
+            success: false,
+            message: "Upload cancelled ❌",
+          });
         }
         if (onUploadStatus) onUploadStatus("end", file);
-        fetchFiles(); 
+        fetchFiles();
         return;
       }
 
       onFileUpload(file, { success: true, message: "Upload complete ✅" });
-        showPopup("success", "✅ Upload complete ");
-        
-        fetchFiles(); 
-      } catch (error) {
-        console.error("Upload failed:", error);
-        onFileUpload(file, { success: false, message: "Upload failed ❌" });
-        showPopup("error", "❌ Upload failed ")
+      showPopup("success", "✅ Upload complete ");
+
+      fetchFiles();
+    } catch (error) {
+      console.error("Upload failed:", error);
+      onFileUpload(file, { success: false, message: "Upload failed ❌" });
+      showPopup("error", "❌ Upload failed ");
     }
 
     if (onUploadStatus) onUploadStatus("end", file);
-  }
-
+  };
 
   return (
-    <>
-      <div className="w-full h-full flex flex-col items-center py-5 mr-2">
-        {/* Header */}
-        <div className=" w-full h-[10%] flex flex-col gap-2 items-center">
-          <div className="flex justify-between w-[90%]">
-            <div className="flex items-center">
-              <div className="bg-[url('/navIco/iconAI.svg')] bg-contain bg-no-repeat w-[3vw] aspect-square"></div>
-              <h1 className="text-[clamp(1.3rem,1.2vw,1.8rem)] font-sans font-medium">
-                Intelligent System
-              </h1>
-            </div>
-            <div className="flex gap-2 items-center">
-              <h1 className="text-[clamp(1.3rem,1.2vw,1.8rem)] font-sans font-medium">
-                {studentData ? `${studentData.firstName} ${studentData.lastName}` : "User Account"}
-              </h1>
-              <div className="bg-[url('/navIco/profile-circle.svg')] bg-contain bg-no-repeat w-[3vw] aspect-square"></div>
-            </div>
-          </div>
-          <div className="w-[90%] h-1 rounded-2xl bg-gray-500"></div>
+    <div className="w-full h-full overflow-hidden flex flex-col gap-6 py-4 px-[5vw]">
+      {/* HEADER */}
+      <div className="flex w-full text-amber-950 items-center justify-between">
+        <div className="flex flex-col leading-relaxed">
+          <h1 className="typo-header-bold">File Management</h1>
+          <span className="typo-content-regular">
+            Organize and manage files
+          </span>
         </div>
-        {/* Main Documents */}
-        <h1 className="self-start ml-6 mb-2 text-[clamp(1.8rem,1.8vw,2.5rem)] font-sans font-medium">
-          FILES UPLOADED
-        </h1>
-        <div className="flex flex-col justify-between gap-2 w-[80vw] h-[80%]">
-          <div className="rounded-xl w-full h-[30%]">
-            <h1 className="text-[clamp(0.6rem,1.3vw,2rem)] font-sans font-medium">
-              Faculties and Curriculum
-            </h1>
-            <div className="flex 0 w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide" 
-              onWheel={(e) => {
-                if (e.deltaY !== 0) {
-                  e.currentTarget.scrollLeft += e.deltaY;
-                }
-              }}>
-              {/* Display the files in the UI for Faculties */}
-              {(uploadedFiles.faculty || []).map((file) => (
-                <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "faculty")} />
-              ))}
-            </div>
-          </div>
-          <div className="rounded-xl w-full h-[30%]">
-            <h1 className="text-[clamp(0.6rem,1.3vw,2rem)] font-sans font-medium" 
-            >
-              Class and Student Record
-            </h1>
-            <div className="flex w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide"
-            onWheel={(e) => {
-              if (e.deltaY !==0) {
-                e.currentTarget.scrollLeft += e.deltaY;
-              }
-            }}>
-              {/* For Students */}
-              {(uploadedFiles.students || []).map((file) => (
-                <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "students")} />
-              ))}
-            </div>
-          </div>
-          <div className="rounded-xl w-full h-[30%]" >
-            <h1 className="text-[clamp(0.6rem,1.3vw,2rem)] font-sans font-medium">
-              Admin and Employees
-            </h1>
-            <div className="flex  w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide" 
-            onWheel={(e) => {
-              if (e.deltaY !==0) {
-                e.currentTarget.scrollLeft += e.deltaY;
-              }
-            }}>
-              {/* For Admins */}
-              {(uploadedFiles.admin || []).map((file) => (
-                <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "admin")} />
-              ))}
-            </div>
-          </div>
-        </div>
-        {/* Add Button */}
-        <FileModal 
-          isOpen={isModalOpen} 
+        <FileModal
+          isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleFileChange}
           studentData={studentData}
         />
-        <div className="absolute right-10 bottom-10">
-          {/* onClick={handleFileClick} */}
-          <button className="nav w-auto" onClick={() => setIsModalOpen(true)}>
-            <img
-              src="/navIco/addFile.svg"
-              alt="Upload"
-              className="navBtn w-[7vw] aspect-square"
-            />
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            style={{ display: "none" }}
-            // onChange={handleFileChange}
-          />
-        </div>
-        <Popup
-          show={popup.show}
-          type={popup.type}
-          message={popup.message}
-          onClose={() => setPopup({ show: false, type: "", message: "" })}
+        <button
+          className="rounded-lg shadow-black/30 typo-buttons-semibold shadow-lg bg-amber-300 h-fit py-[0.5vw] px-[2vw]"
+          onClick={() => setIsModalOpen(true)}
+        >
+          Upload File
+        </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleFileChange}
         />
       </div>
-      <div className="file-upload">
-        <h1 className="text-2xl font-bold mb-4">Uploaded Files</h1>
-        <FileTree files={uploadedFiles} onDelete={handleDeleteFile} />
+
+      {/* CATEGORY */}
+      <div className="w-full text-amber-950">
+        <h1 className="typo-subheader-semibold">Folders</h1>
+        <div className="w-full flex flex-row gap-4 items-center justify-between">
+          <div className="w-full flex flex-col shadow-black/30 shadow-sm bg-gray-100 gap-5 rounded-lg border-black/30 border p-5 ">
+            <img
+              src="./navIco/folder.svg"
+              alt="Folder Icon"
+              className="w-[3vw]"
+            />
+            <span className="typo-content-semibold">Administrative</span>
+          </div>
+          <div className="w-full flex flex-col shadow-black/30 shadow-sm bg-gray-100 gap-5 rounded-lg border-black/30 border p-5 ">
+            <img
+              src="./navIco/folder.svg"
+              alt="Folder Icon"
+              className="w-[3vw]"
+            />
+            <span className="typo-content-semibold">
+              Faculty & Registrar Records
+            </span>
+          </div>
+          <div className="w-full flex flex-col shadow-black/30 shadow-sm bg-gray-100 gap-5 rounded-lg border-black/30 border p-5 ">
+            <img
+              src="./navIco/folder.svg"
+              alt="Folder Icon"
+              className="w-[3vw]"
+            />
+            <span className="typo-content-semibold">
+              Student and Teachers Materials
+            </span>
+          </div>
+        </div>
       </div>
-    </>
+
+      {/* CATEGORY */}
+      <div className="w-full flex flex-col flex-1 text-amber-950 overflow-hidden">
+        <h1 className="typo-subheader-semibold">Files</h1>
+
+        {/* Scrollable file list */}
+        <div className="w-full flex flex-col flex-1 overflow-y-auto pr-2">
+          {Object.entries(uploadedFiles).map(([folder, folderData]) =>
+            (folderData?.files || []).map((filename) => (
+              <FileDisplayCard
+                key={`${folder}-${filename}`}
+                folder={folder}
+                filename={filename}
+                onDelete={handleDeleteFile}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
   );
+
+  // return (
+  //   <>
+  //     <div className="w-full h-full flex flex-col bg-black items-center py-5 mr-2">
+  //       {/* Header */}
+  //       <div className=" w-full h-[10%] flex flex-col gap-2 items-center">
+  //         <div className="flex justify-between w-[90%]">
+  //           <div className="flex items-center">
+  //             <div className="bg-[url('/navIco/iconAI.svg')] bg-contain bg-no-repeat w-[3vw] aspect-square"></div>
+  //             <h1 className="text-[clamp(1.3rem,1.2vw,1.8rem)] font-sans font-medium">
+  //               Intelligent System
+  //             </h1>
+  //           </div>
+  //           <div className="flex gap-2 items-center">
+  //             <h1 className="text-[clamp(1.3rem,1.2vw,1.8rem)] font-sans font-medium">
+  //               {studentData ? `${studentData.firstName} ${studentData.lastName}` : "User Account"}
+  //             </h1>
+  //             <div className="bg-[url('/navIco/profile-circle.svg')] bg-contain bg-no-repeat w-[3vw] aspect-square"></div>
+  //           </div>
+  //         </div>
+  //         <div className="w-[90%] h-1 rounded-2xl bg-gray-500"></div>
+  //       </div>
+  //       {/* Main Documents */}
+  //       <h1 className="self-start ml-6 mb-2 text-[clamp(1.8rem,1.8vw,2.5rem)] font-sans font-medium">
+  //         FILES UPLOADED
+  //       </h1>
+  //       <div className="flex flex-col justify-between gap-2 w-[80vw] h-[80%]">
+  //         <div className="rounded-xl w-full h-[30%]">
+  //           <h1 className="text-[clamp(0.6rem,1.3vw,2rem)] font-sans font-medium">
+  //             Faculties and Curriculum
+  //           </h1>
+  //           <div className="flex 0 w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide"
+  //             onWheel={(e) => {
+  //               if (e.deltaY !== 0) {
+  //                 e.currentTarget.scrollLeft += e.deltaY;
+  //               }
+  //             }}>
+  //             {/* Display the files in the UI for Faculties */}
+  //             {(uploadedFiles.faculty || []).map((file) => (
+  //               <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "faculty")} />
+  //             ))}
+  //           </div>
+  //         </div>
+  //         <div className="rounded-xl w-full h-[30%]">
+  //           <h1 className="text-[clamp(0.6rem,1.3vw,2rem)] font-sans font-medium"
+  //           >
+  //             Class and Student Record
+  //           </h1>
+  //           <div className="flex w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide"
+  //           onWheel={(e) => {
+  //             if (e.deltaY !==0) {
+  //               e.currentTarget.scrollLeft += e.deltaY;
+  //             }
+  //           }}>
+  //             {/* For Students */}
+  //             {(uploadedFiles.students || []).map((file) => (
+  //               <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "students")} />
+  //             ))}
+  //           </div>
+  //         </div>
+  //         <div className="rounded-xl w-full h-[30%]" >
+  //           <h1 className="text-[clamp(0.6rem,1.3vw,2rem)] font-sans font-medium">
+  //             Admin and Employees
+  //           </h1>
+  //           <div className="flex  w-full h-full gap-10 flex-row overflow-x-scroll scrollbar-hide"
+  //           onWheel={(e) => {
+  //             if (e.deltaY !==0) {
+  //               e.currentTarget.scrollLeft += e.deltaY;
+  //             }
+  //           }}>
+  //             {/* For Admins */}
+  //             {(uploadedFiles.admin || []).map((file) => (
+  //               <FileDisplayCard key={file} filename={file} onDelete={() => handleDeleteFile(file, "admin")} />
+  //             ))}
+  //           </div>
+  //         </div>
+  //       </div>
+  //       {/* Add Button */}
+  //       <FileModal
+  //         isOpen={isModalOpen}
+  //         onClose={() => setIsModalOpen(false)}
+  //         onSubmit={handleFileChange}
+  //         studentData={studentData}
+  //       />
+  //       <div className="absolute right-10 bottom-10">
+  //         {/* onClick={handleFileClick} */}
+  //         <button className="nav w-auto" onClick={() => setIsModalOpen(true)}>
+  //           <img
+  //             src="/navIco/addFile.svg"
+  //             alt="Upload"
+  //             className="navBtn w-[7vw] aspect-square"
+  //           />
+  //         </button>
+  //         <input
+  //           type="file"
+  //           ref={fileInputRef}
+  //           style={{ display: "none" }}
+  //           // onChange={handleFileChange}
+  //         />
+  //       </div>
+  //       <Popup
+  //         show={popup.show}
+  //         type={popup.type}
+  //         message={popup.message}
+  //         onClose={() => setPopup({ show: false, type: "", message: "" })}
+  //       />
+  //     </div>
+  //     <div className="file-upload">
+  //       <h1 className="text-2xl font-bold mb-4">Uploaded Files</h1>
+  //       <FileTree files={uploadedFiles} onDelete={handleDeleteFile} />
+  //     </div>
+  //   </>
+  // );
 }
 
 export default FileUpload;
