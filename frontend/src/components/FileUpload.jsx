@@ -256,7 +256,7 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 
   // return (
