@@ -118,40 +118,52 @@ body {
 }
 
 .typo-header-semibold {
-  @apply text-[clamp(2rem,2.7vw,3rem)] font-semibold;
+  @apply text-[clamp(2rem,2.2vw,3rem)] font-semibold;
 
 }
 .typo-header-bold {
-  @apply text-[clamp(2rem,2.7vw,3rem)] font-bold;
+  @apply text-[clamp(2rem,2.2vw,3rem)] font-bold;
 }
 
 .typo-subheader-semibold {
-  @apply text-[clamp(1.5rem,2.2vw,3rem)] font-semibold;
+  @apply text-[clamp(1.5rem,1.7vw,3rem)] font-semibold;
 
 }
 /* Content Typography */
 .typo-content-bold {
-  @apply text-[clamp(0.7rem,1.2vw,3rem)] font-bold;
+  @apply text-[clamp(0.7rem,1vw,3rem)] font-bold;
 }
 
 .typo-content-semibold {
-  @apply text-[clamp(0.7rem,1.2vw,3rem)] font-semibold;
+  @apply text-[clamp(0.7rem,1vw,3rem)] font-semibold;
 }
 
 .typo-content-regular {
-  @apply text-[clamp(0.7rem,1.2vw,3rem)] font-normal;
+  @apply text-[clamp(0.7rem,1vw,3rem)] font-normal;
 }
 
 .typo-content-thin {
-  @apply text-[clamp(0.7rem,1.2vw,3rem)] font-[350];
+  @apply text-[clamp(0.7rem,1vw,3rem)] font-[350];
 }
 /* Content Typography */
 
 
 .typo-buttons-semibold {
-  @apply text-[clamp(0.6rem,1vw,2rem)] font-semibold;
+  @apply text-[clamp(0.6rem,0.8vw,2rem)] font-semibold;
 }
 
 .typo-buttons-regular {
-  @apply text-[clamp(0.6rem,1vw,2rem)] font-normal;
+  @apply text-[clamp(0.6rem,0.8vw,2rem)] font-normal;
+}
+
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }

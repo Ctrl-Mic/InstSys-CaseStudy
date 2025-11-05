@@ -10,6 +10,7 @@ import gsap from "gsap";
 
 gsap.registerPlugin(ScrollSmoother, ScrollTrigger);
 
+
 function Dashboard({ goChat, goAccounts, goLogin }) {
   //* ============= ENV API'S =============
   const EXPRESS_API = import.meta.env.VITE_EXPRESS_API;
@@ -206,7 +207,7 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
       {!loading && (
         <div id="smooth-wrapper" className="flex flex-col bg-[rgb(51,13,3)">
           {/* Navigation Bar */}
-          <div className="navigation-bar px-[1rem] py-[0.5rem] justify-between w-full h-fit flex flex-row bg-white/70 backdrop-blur-sm items-center fixed border-b-2 border-amber-400 z-10">
+          <div className="navigation-bar text-white px-[1rem] py-[0.5rem] justify-between w-full h-fit flex flex-row bg-[#792C1A] backdrop-blur-sm items-center fixed border-b-2 border-amber-400 z-10">
             <div className="flex items-center gap-1">
               <img
                 src="./images/PDM-Logo.svg"

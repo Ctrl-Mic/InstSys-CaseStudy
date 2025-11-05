@@ -18,7 +18,7 @@ function FileTree({ files, folderName, onDelete }) {
       {Object.keys(files)
         .filter((key) => key !== "files")
         .map((subfolder) => (
-          <div key={subfolder} className="ml-4">
+          <div key={subfolder} className="ml-4 bg-amber-500">
             <FileTree
               files={files[subfolder]}
               folderName={subfolder}

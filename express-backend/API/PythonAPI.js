@@ -6,18 +6,17 @@ let execution_mode = 'offline';
 export async function callPythonAPI(userQuery) {
   try {
     console.log("Calling Python API with query:", userQuery);
-    if (!userQuery) {
-      console.log("Missing query parameter");
-      throw new Error("Missing query");
-    }
 
-    const response = await axios.post("http://localhost:5001/v1/chat/prompt/response", {
-      query: userQuery,
-    });
+    if (!userQuery) throw new Error("Missing query");
+
+    const response = await axios.post(
+      "http://localhost:5001/v1/chat/prompt",
+      { query: userQuery }
+    );
 
     return response.data;
   } catch (error) {
-    console.error("Error calling Python API:", error.message);
+    console.error("Error calling Python API:", error.response?.data || error.message);
     throw error;
   }
 }

@@ -1,28 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 
-function FileDisplayCard({ filename, onDelete }) {
-  // Choose icon based on file extension
-  let icon = "/navIco/file-generic.svg";
-  if (filename.endsWith(".xlsx")) icon = "/navIco/file-excel.svg";
-  if (filename.endsWith(".pdf")) icon = "/navIco/file-pdf.svg";
-  if (filename.endsWith(".json")) icon = "/navIco/file-json.svg";
+export default function FileDisplayCard({ folder, filename, onDelete }) {
+  const fileType = filename.split(".").pop();
 
   return (
-    <div className="flex flex-col items-center bg-white rounded-lg shadow-md p-3 max-w-fit h-fit relative">
-      <button
-        className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-        onClick={() => onDelete(filename)}
-        title="Delete file"
+    <div className="border rounded-lg p-3 shadow-sm bg-white flex justify-between items-center">
+      <div>
+        <h3 className="font-semibold">{filename}</h3>
+        <p className="text-sm text-gray-500">Folder: {folder}</p>
+        <p className="text-sm text-gray-400">Type: .{fileType}</p>
+      </div>
+      
+      <button 
+        onClick={() => onDelete(filename, folder)}
+        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm"
       >
-        &#10006;
+        Delete
       </button>
-      <div
-        className="bg-contain bg-no-repeat w-[5vw] aspect-square mb-2"
-        style={{ backgroundImage: `url('${icon}')` }}
-      ></div>
-      <span className="text-xs text-center wrap-break-word w-[60%] break-all">{filename}</span>
     </div>
   );
 }
-
-export default FileDisplayCard;
