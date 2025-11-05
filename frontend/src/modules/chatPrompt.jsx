@@ -161,8 +161,7 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
   };
 
   // Loading and fallback states
-  if (loading)
-    return <div className="w-screen h-screen bg-white"></div>;
+  if (loading) return <div className="w-screen h-screen bg-white"></div>;
   if (!studentData)
     return (
       <div className="w-screen h-screen items-center justify-center bg-white">
@@ -184,6 +183,19 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
           </h1>
         </div>
         <div className="flex items-center gap-5 typo-buttons-semibold">
+          <a
+            onClick={() => navigate("/dashboard")}
+            href="#Account"
+            className="flex items-center w-fit hover:scale-102 duration-200 hover:underline"
+          >
+            {" "}
+            <img
+              className="w-5 h-5 mr-2 aspect-square"
+              src="./navIco/house.svg"
+              alt="Account Icon"
+            />{" "}
+            home
+          </a>
           <a
             onClick={() => setActiveView("chat")}
             href="#Chat"
@@ -239,19 +251,6 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
                 />{" "}
                 Account
               </a>
-              <a
-                onClick={() => navigate("/dashboard")}
-                href="#Account"
-                className="flex items-center w-fit hover:scale-102 duration-200 hover:underline"
-              >
-                {" "}
-                <img
-                  className="w-5 h-5 mr-2 aspect-square"
-                  src="./navIco/house.svg"
-                  alt="Account Icon"
-                />{" "}
-                home
-              </a>
             </div>
           )}
         </div>
@@ -265,7 +264,7 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
         )}
         {activeView === "file" && (
           <div className="w-full h-full p-2 bg-gray-100 ">
-            <FileDisplay studentData={studentData}/>
+            <FileDisplay studentData={studentData} />
           </div>
         )}
         {activeView === "courses" && (
