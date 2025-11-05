@@ -5,6 +5,7 @@
   "main": "utils/main.js",
   "scripts": {
     "start": "node utils/run_system.js",
+    "server": "nodemon server.js",
     "dev": "nodemon utils/run_system.js",
     "test": "node utils/main.js",
     "system": "node utils/run_system.js",
