@@ -162,10 +162,10 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
 
   // Loading and fallback states
   if (loading)
-    return <div className="w-screen h-screen bg-white">Loading...</div>;
+    return <div className="w-screen h-screen bg-white"></div>;
   if (!studentData)
     return (
-      <div className="w-screen h-screen bg-white">
+      <div className="w-screen h-screen items-center justify-center bg-white">
         No student data found. Please log in again.
       </div>
     );

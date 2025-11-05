@@ -159,7 +159,7 @@ export default function ChatModel() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center">
+    <div className="w-full h-[92vh] flex flex-col items-center">
       <div className="w-[50%] h-full overflow-auto no-scrollbar p-3 space-y-8">
         {messages.map((m, i) => (
           <div
