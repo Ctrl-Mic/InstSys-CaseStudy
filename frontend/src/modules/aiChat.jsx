@@ -55,6 +55,9 @@ function AiChat({
   const toggleMic = () => setMicOn((prev) => !prev);
   const toggleHolo = () => setHoloOn((prev) => !prev);
 
+/**
+ * The submitVoiceInput function sends a message with the provided text and then clears the input.
+ */
   const submitVoiceInput = (text) => {
     sendMessage(text);
     setInput("");
@@ -273,6 +276,11 @@ function AiChat({
                       />
                     </form>
                   ) : (
+                    /* The above code is a JSX snippet in a React component that is using a component
+                    called `VoiceInput`. It is passing several props to the `VoiceInput` component:
+                    `setInput`, `micON`, `sendMessage`, and `toggleMic`. These props are likely used
+                    to handle voice input functionality, such as setting input text, toggling the
+                    microphone on and off, and sending messages. */
                     <VoiceInput
                       setInput={setInput}
                       micON={micON}

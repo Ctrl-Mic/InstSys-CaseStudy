@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/chatPrompt.css";
 import FileUpload from "../components/FileUpload";
+import ChatModel from "./chatModel.jsx";
+import FileDisplay from "../components/fileDisplay.jsx";
 import AiChat from "./aiChat";
 import Courses from "./courses";
 import Account from "../components/account";
@@ -17,7 +19,6 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
   const [activeView, setActiveView] = useState(initialView);
   const [aiText, setAiText] = useState("");
   const navigate = useNavigate();
-
   // =============================
   // Fetch student data on load
   // =============================
@@ -173,145 +174,130 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
   // Main JSX
   // =============================
   return (
-    <div className="chat-prompt w-full h-full p-0 m-0">
-      <div className="mainContent flex h-full justify-center items-center">
-        {/* NAV BAR */}
-        <motion.div
-          variants={childVariants}
-          custom={0.1}
-          initial="hidden"
-          animate="visible"
-          className="navBar w-full h-full flex flex-col bg-[#792C1A] justify-around z-10"
-        >
-          <div className="flex flex-col h-full justify-between gap-5 px-[8%] py-7">
-            <div className="w-full h-fit flex flex-col gap-4">
-              <div className="flex gap-[2%] items-center">
-                <button className="nav w-auto !py-4">
-                  <img
-                    src="./public/images/PDM-Logo.svg"
-                    alt="PDM-LOGO"
-                    className="navBtn w-[6vw] aspect-square"
-                  />
-                </button>
-                <h1 className="text-white font-sans text-[clamp(1rem,3vw,4rem)] font-bold">
-                  PDM
-                </h1>
-              </div>
-              <div className="w-full rounded-2xl h-1 bg-gray-400"></div>
-
-              <div
-                onClick={() => setActiveView("chat")}
-                className="w-full flex items-center h-[5vh] hover:scale-103 transition-all duration-300 cursor-pointer"
+    <div className="flex flex-col items-center justify-between w-[100vw] h-screen">
+      {/* NAVIGATION BAR */}
+      <div className="text-white px-[1rem] py-[0.5rem] justify-between w-full h-fit flex flex-row bg-[#792C1A] backdrop-blur-sm items-center border-b-2 border-amber-400">
+        <div className="flex items-center gap-1">
+          <img src="./images/PDM-Logo.svg" alt="PDM Logo" className="w-[5%]" />
+          <h1 className="typo-subheader-semibold">
+            <span className="text-amber-300">Information</span>System
+          </h1>
+        </div>
+        <div className="flex items-center gap-5 typo-buttons-semibold">
+          <a
+            onClick={() => setActiveView("chat")}
+            href="#Chat"
+            className="flex items-center w-fit hover:scale-102 duration-200 hover:underline"
+          >
+            {" "}
+            <img
+              className="w-5 h-5 mr-2 aspect-square"
+              src="./navIco/bot-message-square.svg"
+              alt="Chat Icon"
+            />{" "}
+            Ai Chat
+          </a>
+          {!(isStudent || isGuest) && (
+            <div className="flex gap-5">
+              <a
+                onClick={() => setActiveView("file")}
+                href="#File_Management"
+                className="flex items-center w-fit hover:scale-102 duration-200 hover:underline"
               >
-                <button onClick={() => setActiveView("chat")}>
-                  <img
-                    src="/navIco/chatBox.svg"
-                    alt=""
-                    className="w-[80%] aspect-square cursor-pointer"
-                  />
-                </button>
-                <h1 className="text-white text-[clamp(1rem,1.2vw,1.5rem)] ">
-                  Smart System
-                </h1>
-              </div>
-
-              {!(isStudent || isGuest) && (
-                <div
-                  onClick={() => setActiveView("upload")}
-                  className="w-full flex items-center h-[5vh] hover:scale-103 transition-all duration-300 cursor-pointer"
-                >
-                  <button onClick={() => setActiveView("upload")}>
-                    <img
-                      src="/navIco/loadedFiles.svg"
-                      alt=""
-                      className="w-[80%] aspect-square cursor-pointer"
-                    />
-                  </button>
-                  <h1 className="text-white text-[clamp(1rem,1.2vw,1.5rem)] ">
-                    Loaded Files
-                  </h1>
-                </div>
-              )}
-
-              {!(isStudent || isGuest || isFaculty) && (
-                <>
-                  <div
-                    onClick={() => setActiveView("courses")}
-                    className="w-full flex items-center h-[5vh] hover:scale-103 transition-all duration-300 cursor-pointer"
-                  >
-                    <button onClick={() => setActiveView("courses")}>
-                      <img
-                        src="/navIco/programs.svg"
-                        alt=""
-                        className="w-[80%] aspect-square cursor-pointer"
-                      />
-                    </button>
-                    <h1 className="text-white text-[clamp(1rem,1.2vw,1.5rem)] ">
-                      Programs
-                    </h1>
-                  </div>
-
-                  <div
-                    onClick={() => setActiveView("create")}
-                    className="w-full flex items-center h-[5vh] hover:scale-103 transition-all duration-300 cursor-pointer"
-                  >
-                    <button onClick={() => setActiveView("create")}>
-                      <img
-                        src="/navIco/createAcc.svg"
-                        alt=""
-                        className="w-[80%] aspect-square cursor-pointer"
-                      />
-                    </button>
-                    <h1 className="text-white text-[clamp(1rem,1.2vw,1.5rem)] ">
-                      Create Account
-                    </h1>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="w-full h-fit flex flex-col gap-4">
-              <div className="w-full rounded-2xl h-1 bg-gray-400"></div>
-
-              <div
+                {" "}
+                <img
+                  className="w-5 h-5 mr-2 aspect-square"
+                  src="./navIco/folder-open.svg"
+                  alt="Folder Icon"
+                />{" "}
+                File Management
+              </a>
+              <a
+                onClick={() => setActiveView("courses")}
+                href="#Programs_&_Courses"
+                className="flex items-center w-fit hover:scale-102 duration-200 hover:underline"
+              >
+                {" "}
+                <img
+                  className="w-5 h-5 mr-2 aspect-square"
+                  src="./navIco/graduation-cap.svg"
+                  alt="Program Icon"
+                />{" "}
+                Programs & Courses
+              </a>
+              {/* TODO: Add a CMS page here */}
+              <a
                 onClick={() => setActiveView("account")}
-                className="w-full flex items-center h-[5vh] hover:scale-103 transition-all duration-300 cursor-pointer"
+                href="#Account"
+                className="flex items-center w-fit hover:scale-102 duration-200 hover:underline"
               >
-                <button className="nav w-auto !py-4">
-                  <img
-                    src="./navIco/user.svg"
-                    alt="PDM-LOGO"
-                    className="w-[80%] aspect-square cursor-pointer"
-                  />
-                </button>
-                <h1 className="text-white text-[clamp(1rem,1.2vw,1.5rem)] ">
-                  Account
-                </h1>
-              </div>
-
-              <div
-                onClick={() => {
-                  navigate("/dashboard")
-                }}
-                className="w-full flex items-center h-[5vh] hover:scale-103 transition-all duration-300 cursor-pointer"
+                {" "}
+                <img
+                  className="w-5 h-5 mr-2 aspect-square"
+                  src="./navIco/chat-user.svg"
+                  alt="Account Icon"
+                />{" "}
+                Account
+              </a>
+              <a
+                onClick={() => navigate("/dashboard")}
+                href="#Account"
+                className="flex items-center w-fit hover:scale-102 duration-200 hover:underline"
               >
-                <button onClick={goDashboard}>
-                  <img
-                    src="/navIco/user.svg"
-                    alt=""
-                    className="w-[80%] aspect-square cursor-pointer"
-                  />
-                </button>
-                <h1 className="text-white text-[clamp(1rem,1.2vw,1.5rem)] ">
-                  Dashboard
-                </h1>
-              </div>
+                {" "}
+                <img
+                  className="w-5 h-5 mr-2 aspect-square"
+                  src="./navIco/house.svg"
+                  alt="Account Icon"
+                />{" "}
+                home
+              </a>
             </div>
-          </div>
-        </motion.div>
+          )}
+        </div>
+      </div>
 
-        {/* MAIN VIEW AREA */}
-        <div className="main flex flex-col gap-2 justify-center items-center w-full h-screen">
+      <div className="mainContent flex flex-col bg-gray-100 w-full h-screen">
+        {activeView === "chat" && (
+          <div className="flex w-full h-full">
+            <ChatModel />
+          </div>
+        )}
+        {activeView === "file" && (
+          <div className="w-full h-full p-2 bg-gray-100 ">
+            <FileDisplay studentData={studentData}/>
+          </div>
+        )}
+        {activeView === "courses" && (
+          <div className="w-full h-full p-2 bg-gray-100 ">
+            <Courses studentData={studentData} />
+          </div>
+        )}
+        {activeView === "account" && (
+          <div className="w-full h-full p-2 bg-gray-100 ">
+            <Account studentData={studentData} />
+          </div>
+        )}
+
+        {/* <div
+          className={`${
+            activeView === "chat" ? "flex" : "hidden"
+          }`}
+        >
+          <ChatModel></ChatModel>
+        </div>
+        
+        <div
+          className={`${
+            activeView === "file" ? "flex" : "hidden"
+          }`}
+        >
+          <FileUpload
+            studentData={studentData}
+            onFileUpload={handleFileSelect}
+          />
+        </div> */}
+        {/* <div className="main flex flex-col gap-2 justify-center items-center w-full h-screen">
           <div
             className={`${
               activeView === "chat" ? "flex" : "hidden"
@@ -355,7 +341,7 @@ function ChatPrompt({ goDashboard, initialView = "chat" }) {
           >
             <Account studentData={studentData} />
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
