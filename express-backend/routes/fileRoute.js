@@ -85,15 +85,16 @@ router.get("/files", (req, res) => {
 });
 
 const VALID_FOLDERS = [
-  "students_data",
+  "student_list",
+  "student_grades",
   "non_teaching_faculty",
+  "non_teaching_faculty_sched",
   "teaching_faculty",
+  "teaching_faculty_sched",
   "cor",
-  "faculty_schedule",
-  "grades",
   "admin",
   "curriculum",
-  "generalinfo",
+  "general_info",
 ];
 
 // === POST /upload ===

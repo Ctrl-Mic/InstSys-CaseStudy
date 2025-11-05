@@ -24,8 +24,8 @@ export default function FileModal({ isOpen, onClose, onSubmit, studentData }) {
     if (file && folder) {
       // Determine subfolder based on file extension
       const ext = file.name.toLowerCase().endsWith('.xlsx') ? '_excel' 
-            : file.name.toLowerCase().endsWith('.pdf') ? '_pdf'
-            : file.name.toLowerCase().endsWith('.json') ? '_json'
+            : file.name.toLowerCase().endsWith('.pdf') ? '_excel'
+            : file.name.toLowerCase().endsWith('.json') ? '_excel'
             : '';
       
       // Combine base folder with extension suffix
@@ -91,12 +91,12 @@ export default function FileModal({ isOpen, onClose, onSubmit, studentData }) {
               className="py-2 rounded-2xl border px-2"
             >
               <option value="" disabled>Select Folder</option>
-              <option value="students_data">Students Data</option>
+              <option value="student_grades">Students Grades</option>
+              <option value="student_list">Students List</option>
               <option value="non_teaching_faculty">Non-Teaching Faculty</option>
               <option value="teaching_faculty">Teaching Faculty</option>
+              <option value="teaching_faculty_sched">Teaching Faculty Schedule</option>
               <option value="cor">COR</option>
-              <option value="faculty_schedule">Faculty Schedule</option>
-              <option value="grades">Grades</option>
               <option value="admin">Admin</option>
               <option value="curriculum">Curriculum</option>
               <option value="generalinfo">General Info</option>

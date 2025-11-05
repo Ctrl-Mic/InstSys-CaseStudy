@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import FileModal from "./fileModal.jsx";
 import Popup from "../utils/popups.jsx";
 
-export default function FileDisplay( {studentData} ) {
+export default function FileDisplay({ studentData }) {
   // * API
   const EXPRESS_API = import.meta.env.VITE_EXPRESS_API;
 
@@ -22,7 +22,18 @@ export default function FileDisplay( {studentData} ) {
       const data = await response.json();
 
       const allFilesDict = {};
-      const catList = Object.keys(data.files);
+      const catList = [
+        "cor_excel",
+        "non_teaching_faculty_excel",
+        "student_grades_excel",
+        "student_list_excel",
+        "teaching_faculty_excel",
+        "teaching_faculty_sched_excel",
+        "non_teaching_faculty_sched_excel",
+        "admin_excel",
+        "curriculum_excel",
+        "general_info_pdf",
+      ];
 
       Object.entries(data.files).forEach(([category, obj]) => {
         obj.files.forEach((file) => {
@@ -61,35 +72,61 @@ export default function FileDisplay( {studentData} ) {
     if (
       !allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
     ) {
-      alert(
-        "Only Excel (.xlsx), JSON (.json), and PDF (.pdf) files are allowed ❌"
-      );
+      alert("Only Excel (.xlsx) and PDF (.pdf) files are allowed ❌");
       e.target.value = null;
       return;
     }
 
-    // 👉 Ask where to upload
-    if (
-      !folder ||
-      !["faculty", "students", "admin"].includes(folder.toLowerCase())
-    ) {
-      alert("❌ Invalid choice. Please select: faculty, students, or admin.");
+    // 👉 Validate folder name
+    if (!folder || !categories.includes(folder.toLowerCase())) {
+      alert(
+        `❌ Invalid choice. Please select one of: ${categories.join(", ")}`
+      );
       return;
     }
 
-    if (onUploadStatus) onUploadStatus("start", file);
+    // if (onUploadStatus) onUploadStatus("start", file);
 
     const formData = new FormData();
     formData.append("file", file);
     formData.append("folder", folder.toLowerCase()); // ✅ send folder choice
 
     try {
-      let response = await fetch("http://127.0.0.1:5000/v1/upload/file", {
+      //? =============================================
+      //* UNCOMMENT THIS FOR DATABASE UPLOAD
+      //? =============================================
+      // // Step 1: Upload to MongoDB
+      // let response = await fetch("http://127.0.0.1:5000/v1/upload/file", {
+      //   method: "POST",
+      //   body: formData,
+      // });
+
+      // let result = await response.json();
+
+      // if (!response.ok) {
+      //   console.error("MongoDB upload failed:", result.message);
+      //   showPopup("error", "❌ MongoDB upload failed");
+      //   return;
+      // }
+
+      // console.log("MongoDB upload successful:", result);
+      //? =============================================
+
+      // Step 2: Upload to Local Storage
+      let response = await fetch("http://127.0.0.1:5000/upload", {
         method: "POST",
         body: formData,
       });
 
       let result = await response.json();
+
+      if (!response.ok) {
+        console.error("Local upload failed:", result.message);
+        // showPopup("error", "❌ Local upload failed");
+        return;
+      }
+
+      console.log("Local upload successful:", result);
 
       // Handle duplicates
       if (response.status === 409 && result.duplicate) {
@@ -104,29 +141,29 @@ export default function FileDisplay( {studentData} ) {
             body: overwriteForm,
           });
           result = await response.json();
-          onFileUpload(file, { success: true, message: "File overwritten ✅" });
+          // onFileUpload(file, { success: true, message: "File overwritten ✅" });
         } else {
           onFileUpload(file, {
             success: false,
             message: "Upload cancelled ❌",
           });
         }
-        if (onUploadStatus) onUploadStatus("end", file);
+        // if (onUploadStatus) onUploadStatus("end", file);
         fetchFiles();
         return;
       }
 
-      onFileUpload(file, { success: true, message: "Upload complete ✅" });
-      showPopup("success", "✅ Upload complete ");
+      // onFileUpload(file, { success: true, message: "Upload complete ✅" });
+      // showPopup("success", "✅ Upload complete ");
 
       fetchFiles();
     } catch (error) {
       console.error("Upload failed:", error);
-      onFileUpload(file, { success: false, message: "Upload failed ❌" });
-      showPopup("error", "❌ Upload failed ");
+      // onFileUpload(file, { success: false, message: "Upload failed ❌" });
+      // showPopup("error", "❌ Upload failed ");
     }
 
-    if (onUploadStatus) onUploadStatus("end", file);
+    // if (onUploadStatus) onUploadStatus("end", file);
   };
 
   useEffect(() => {
