@@ -3,7 +3,8 @@
 import re
 import copy
 import spacy # <-- Import spacy
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+
 
 class PolicyEngine:
     """
@@ -65,5 +66,51 @@ class PolicyEngine:
             "user_pattern": user_pattern,
             "plan_template": plan_template
         }
+    
+
+
+
+    def get_intent(self, query: str) -> Optional[str]:
+        """
+        A fast, local, rule-based intent classifier.
+        This is used by the ExampleManager for its Tier 1 retrieval.
+        """
+        q_lower = query.lower().strip()
+
+        # --- Tier 1: Direct, high-confidence matches ---
+
+        # get_person_profile
+        if re.search(r'^(who is|what is|profile of|tell me about)\b', q_lower):
+            return "get_person_profile"
+
+        # get_person_schedule
+        if re.search(r'\b(schedule|class|when is|classes)\b', q_lower):
+            return "get_person_schedule"
+        
+        # get_student_grades
+        if re.search(r'\b(grades|gwa|scores|class standing)\b', q_lower):
+            return "get_student_grades"
+
+        # query_curriculum
+        if re.search(r'\b(curriculum|subjects|what subjects)\b', q_lower):
+            return "query_curriculum"
+
+        # find_people (group)
+        if re.search(r'\b(list all|how many|find all|show all)\b', q_lower):
+            if re.search(r'\b(students|faculty|teachers)\b', q_lower):
+                return "find_people"
+
+        # answer_conversational_query
+        if q_lower in ['hi', 'hello', 'hey', 'thanks', 'thank you', 'ok', 'okay']:
+            return "answer_conversational_query"
+
+        # --- Tier 2: Fallback (if no high-confidence match) ---
+        # If it *looks* like a person query, guess get_person_profile
+        if len(q_lower.split()) <= 4:
+            # This is a weak heuristic, but it's our best local guess
+            return "get_person_profile" 
+
+        # If we have no idea, return None and let the main LLM planner decide
+        return None
 
     
