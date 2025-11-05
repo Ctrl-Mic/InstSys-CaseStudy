@@ -4,6 +4,20 @@ import FileModal from "./fileModal.jsx";
 import Popup from "../utils/popups.jsx";
 import FileTree from "./FileTree";
 
+/* The above code is a React component named `FileUpload` that handles file uploads to a backend
+server. Here is a summary of what the code does: */
+const VALID_FOLDERS = [
+  "students_data",
+  "non_teaching_faculty",
+  "teaching_faculty",
+  "cor",
+  "faculty_schedule",
+  "grades",
+  "admin",
+  "curriculum",
+  "generalinfo",
+];
+
 function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
   const fileInputRef = useRef(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,26 +84,21 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
   const handleFileChange = async (file, folder) => {
     if (!file) return;
 
+    console.log("Uploading file:", file.name);
+    console.log("Target folder:", folder);
+
     // ✅ Allowed file extensions
     const allowedExtensions = [".xlsx", ".json", ".pdf"];
 
     // Check if the file is one of the allowed types
-    if (
-      !allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
-    ) {
-      alert(
-        "Only Excel (.xlsx), JSON (.json), and PDF (.pdf) files are allowed ❌"
-      );
-      e.target.value = null;
+    if (!allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
+      alert("Only Excel (.xlsx), JSON (.json), and PDF (.pdf) files are allowed ❌");
       return;
     }
 
-    // 👉 Ask where to upload
-    if (
-      !folder ||
-      !["faculty", "students", "admin"].includes(folder.toLowerCase())
-    ) {
-      alert("❌ Invalid choice. Please select: faculty, students, or admin.");
+    // 👉 Validate folder name
+    if (!folder || !VALID_FOLDERS.includes(folder.toLowerCase())) {
+      alert(`❌ Invalid choice. Please select one of: ${VALID_FOLDERS.join(", ")}`);
       return;
     }
 
@@ -98,8 +107,10 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("folder", folder.toLowerCase()); // ✅ send folder choice
+    formData.append("category", "test")
 
     try {
+      // Step 1: Upload to MongoDB
       let response = await fetch("http://127.0.0.1:5000/v1/upload/file", {
         method: "POST",
         body: formData,
@@ -107,7 +118,31 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
 
       let result = await response.json();
 
-      // Handle duplicates
+      if (!response.ok) {
+        console.error("MongoDB upload failed:", result.message);
+        showPopup("error", "❌ MongoDB upload failed");
+        return;
+      }
+
+      console.log("MongoDB upload successful:", result);
+
+      // Step 2: Upload to Local Storage
+      response = await fetch("http://127.0.0.1:5000/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      result = await response.json();
+
+      if (!response.ok) {
+        console.error("Local upload failed:", result.message);
+        showPopup("error", "❌ Local upload failed");
+        return;
+      }
+
+      console.log("Local upload successful:", result);
+
+      // Step 3: Handle duplicates (if any)
       if (response.status === 409 && result.duplicate) {
         const confirm = window.confirm(result.message);
         if (confirm) {
@@ -132,6 +167,7 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
         return;
       }
 
+      // Step 4: Finalize upload
       onFileUpload(file, { success: true, message: "Upload complete ✅" });
       showPopup("success", "✅ Upload complete ");
 
@@ -155,8 +191,19 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
             Organize and manage files
           </span>
         </div>
-        <FileModal
-          isOpen={isModalOpen}
+        {/* Main Documents */}
+        <h1 className="self-start ml-6 mb-2 text-[clamp(1.8rem,1.8vw,2.5rem)] font-sans font-medium">
+          FILES UPLOADED
+        </h1>
+        
+        <div className="overflow-auto h-[75%] w-[90%] rounded-lg p-4 relative scrollbar-hide">
+          {/* <h1 className="text-2xl font-bold mb-4">Uploaded Files</h1> */}
+          <FileTree files={uploadedFiles} onDelete={handleDeleteFile} />
+        </div>
+
+        {/* Add Button */}
+        <FileModal 
+          isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleFileChange}
           studentData={studentData}
@@ -209,26 +256,7 @@ function FileUpload({ onFileUpload, onUploadStatus, studentData }) {
           </div>
         </div>
       </div>
-
-      {/* CATEGORY */}
-      <div className="w-full flex flex-col flex-1 text-amber-950 overflow-hidden">
-        <h1 className="typo-subheader-semibold">Files</h1>
-
-        {/* Scrollable file list */}
-        <div className="w-full flex flex-col flex-1 overflow-y-auto pr-2">
-          {Object.entries(uploadedFiles).map(([folder, folderData]) =>
-            (folderData?.files || []).map((filename) => (
-              <FileDisplayCard
-                key={`${folder}-${filename}`}
-                folder={folder}
-                filename={filename}
-                onDelete={handleDeleteFile}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+    </>
   );
 
   // return (
