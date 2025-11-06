@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const courseMap = {
   BSCS: "Bachelor of Science in Computer Science (BSCS)",
@@ -7,7 +7,7 @@ const courseMap = {
   BSTM: "Bachelor of Science in Tourism Management (BSTM)",
   BSOAd: "Bachelor of Science in Office Administration (BSOAd)",
   BECEd: "Bachelor of Early Childhood Education (BECEd)",
-  BTLEd: "Bachelor of Technology in Livelihood Education (BTLEd)"
+  BTLEd: "Bachelor of Technology in Livelihood Education (BTLEd)",
 };
 
 export default function Account({ studentData }) {
@@ -20,9 +20,15 @@ export default function Account({ studentData }) {
   return (
     <div className="w-full h-full gap-5 p-4 flex flex-col">
       <div className="flex gap-4 p-3 shadow-md bg-gray-100/70 rounded-lg w-full h-[20%] items-center">
-        <div className="h-full aspect-square bg-white shadow-lg rounded-full flex-shrink-0"></div>
+        <img
+          src={studentData.img}
+          alt="test"
+          className="h-full aspect-square bg-white shadow-lg rounded-full flex-shrink-0 object-cover"
+        />
         <div className="flex flex-col gap-3">
-          <h1 className="text-5xl font-medium">{studentData.firstName} {studentData.lastName}</h1>
+          <h1 className="text-5xl font-medium">
+            {studentData.firstName} {studentData.lastName}
+          </h1>
           <h2 className="text-3xl">{studentData.role}</h2>
         </div>
       </div>
@@ -67,7 +73,9 @@ export default function Account({ studentData }) {
 
       <div className="flex gap-4 p-3 shadow-md bg-gray-100/70 rounded-lg w-full h-[20%]">
         <div className="flex flex-col gap-3">
-          <h1 className="text-3xl font-medium">Additional Student Information</h1>
+          <h1 className="text-3xl font-medium">
+            Additional Student Information
+          </h1>
           {/* Add any additional info here */}
         </div>
       </div>
