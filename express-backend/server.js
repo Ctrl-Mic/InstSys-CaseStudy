@@ -44,14 +44,11 @@ app.get("/health", (req, res) => {
   console.log("Health check endpoint was called.");
 });
 
-app.get("/initialize/AI", async (req, res) => {
+app.get("/initialize/AI", (req, res) => {
   try {
-    console.log("initializing AI");
-    await configPythonAPI();
-    res.status(200).json({ status: "AI initialized" });
+    configPythonAPI();
   } catch (err) {
     console.error("AI initialization failed:", err);
-    res.status(500).json({ error: "AI initialization failed" });
   }
 });
 
