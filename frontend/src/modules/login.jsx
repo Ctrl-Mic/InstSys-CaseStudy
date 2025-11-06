@@ -60,30 +60,6 @@ function Login({ goRegister }) {
   }, []);
 
   // =================================
-  // Initialize AI configuration
-  // =================================
-  
-  useEffect(() => {
-    fetch(`${EXPRESS_API}/initialize/AI`)
-      .then((res) => res.json())
-      .then(console.log)
-      .catch(console.error);
-    const checkServer = async () => {
-      try {
-        const res = await fetch(`${EXPRESS_API}/initialize/AI`);
-        if (res.ok) {
-          setLoading(false);
-        } else {
-          setTimeout(checkServer, 200);
-        }
-      } catch {
-        setTimeout(checkServer, 200);
-      }
-    };
-    checkServer();
-  }, []);
-
-  // =================================
   // Login Validation
   // =================================
   const handleLogin = async (e) => {

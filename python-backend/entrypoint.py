@@ -32,17 +32,18 @@ async def change_mode(mode: str):
     valid_modes = ["online", "offline"]
     if mode not in valid_modes:
         raise HTTPException(status_code=400, detail="Invalide Execution mode.")
-    
+    print(f"execution mode: {mode}")
     if ai_analyst is None:
         raise HTTPException(status_code=400, detail="AI Analyst not initialized.")
     
-    ai_analyst.executiona_mode = mode
+    ai_analyst.execution_mode = mode
     print(f" Execution mode set to: {mode}")
     
 
 @app.post("/v1/chat/prompt/response")
 async def ChatPrompt(request: Request):
     global ai_analyst
+    print("calling chatprompt")
     if ai_analyst is None:
         raise HTTPException(status_code=400, detail="AI Analyst not configured.")
     
@@ -50,8 +51,9 @@ async def ChatPrompt(request: Request):
     if not data or 'query' not in data:
         raise HTTPException(status_code=400, detail="Missing query")
     
-    user_query = data['query']
-    final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query)
+    user_query, session_id = data['query'], data['session_id']
+    final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query, session_id=session_id)
+    print(f"response: {final_answer}")
     return JSONResponse({"response": final_answer}, status_code=201)
 
 

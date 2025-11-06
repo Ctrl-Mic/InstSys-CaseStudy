@@ -75,10 +75,10 @@ function Dashboard({ goChat, goAccounts, goLogin }) {
         if (res.ok) {
           setLoading(false);
         } else {
-          setTimeout(checkServer, 200);
+          setTimeout(InitAI, 200);
         }
       } catch {
-        setTimeout(checkServer, 200);
+        setTimeout(InitAI, 200);
       }
     }
 
