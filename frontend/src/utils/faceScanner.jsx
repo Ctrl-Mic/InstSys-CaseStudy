@@ -79,7 +79,7 @@ function FaceScanner({ faceOn, onClose }) {
     // Register Face
     // ------------------------------
     const faceRegister = async () => {
-      const img = await faceapi.fetchImage("./models/face/face.jpg");
+      const img = await faceapi.fetchImage("./models/face/49174c30-00a2-46d8-bcd9-c81f11b52053.jpg");
       const detection = await faceapi
         .detectSingleFace(img)
         .withFaceLandmarks()

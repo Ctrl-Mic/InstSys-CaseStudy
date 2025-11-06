@@ -203,35 +203,41 @@ function Register({ goLogin }) {
 
     setError("");
 
-    // Construct payload with FormData (Flask-compatible)
-    const formData = new FormData();
-    console.log(file);
-    formData.append("image", file); // new field added
-    formData.append(
-      "data",
-      JSON.stringify({
-        firstName: form.firstName,
-        middleName: form.middleName,
-        lastName: form.lastName,
-        password: form.password,
-        studentId: form.studentId,
-        course: form.course,
-        year: form.year,
-        email: form.email,
-        faceDescriptor: descriptor, //new field added
-      })
-    );
+    // Convert file to Base64 before sending
+    const convertToBase64 = (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result); // Base64 string here
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      });
+    };
+
+    const base64Image = await convertToBase64(file);
+
+    const payload = {
+      firstName: form.firstName,
+      middleName: form.middleName,
+      lastName: form.lastName,
+      password: form.password,
+      studentId: form.studentId,
+      course: form.course,
+      year: form.year,
+      email: form.email,
+      faceDescriptor: descriptor,
+      image: base64Image, // ✅ Send as Base64
+    };
 
     try {
       const res = await fetch(`${EXPRESS_API}/register`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-
       if (res.ok) {
-        setShowSuccess(true);
+        showPopup("success", "✅ Registration successful!");
         navigate("/login");
       } else {
         showPopup("error", data.error || "❌ Registration failed.");
