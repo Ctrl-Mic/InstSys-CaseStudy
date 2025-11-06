@@ -125,6 +125,8 @@ class AIAnalyst:
             self.synth_llm = LLMService(online_cfg)
             self.debug_mode = offline_cfg.get("debug_mode", False)
 
+        self._build_dynamic_collection_groups()
+
         self.db_schema_summary = "Schema not generated yet."
         self.REVERSE_SCHEMA_MAP = self._create_reverse_schema_map()
         self._generate_db_schema()
@@ -138,6 +140,28 @@ class AIAnalyst:
         self.debug(f"  -> Found {len(self.all_departments)} departments: {self.all_departments}")
         self.debug(f"  -> Found {len(self.all_programs)} programs: {self.all_programs}")
         self.debug(f"  -> Found {len(self.all_statuses)} statuses: {self.all_statuses}")
+        # --- ADD THIS NEW BLOCK TO DYNAMICALLY DEFINE GENERIC ROLES ---
+        self.debug("Building dynamic role classifiers...")
+
+        # 1. Create lowercase sets of your pre-loaded lists
+        all_positions_lower = {p.lower() for p in self.all_positions}
+        all_depts_lower = {d.lower() for d in self.all_departments}
+
+        # 2. Create a small list of "meta" words that are always generic
+        #    This is the ONLY hard-coded list, and it's small.
+        hardcoded_synonyms = {'faculty', 'admin', 'staff', 'non-teaching', 'teaching', 'employee', 'personnel', 'student'}
+
+        # 3. Create our master list of ALL generic words
+        #    A role is "generic" if it's a department OR a common synonym
+        self.all_generic_roles = hardcoded_synonyms.union(all_depts_lower)
+
+        # 4. Create our master list of SPECIFIC positions
+        #    A role is "specific" if it's in the all_positions list
+        #    BUT NOT in our generic list.
+        self.specific_position_roles = all_positions_lower - self.all_generic_roles
+
+        self.debug(f"  -> All Generic Roles (Categories): {self.all_generic_roles}")
+        self.debug(f"  -> Specific Positions (Job Titles): {self.specific_position_roles}")
         self.all_doc_types = self._get_unique_document_types()
         self.policy_engine = PolicyEngine(known_programs=self.all_programs)
         self.training_system = TrainingSystem(mongo_db=self.mongo_db)
@@ -171,6 +195,91 @@ class AIAnalyst:
 
 
     # In analyst.py, inside the AIAnalyst class
+
+    # backend/utils/ai_core/analyst.py
+
+    # backend/utils/ai_core/analyst.py
+
+    # --- REPLACE THIS ENTIRE METHOD ---
+    def _build_dynamic_collection_groups(self):
+        """
+        [CORRECTED] Dynamically categorizes all loaded collections by their prefix
+        to support searching new collections automatically.
+        
+        This version fixes the bug where schedule collections were being
+        incorrectly grouped as staff profiles by checking for specific
+        schedule prefixes FIRST.
+        """
+        # 1. Initialize empty lists
+        student_list = []
+        staff_list = []
+        schedule_student_list = []
+        schedule_faculty_list = []
+        schedule_staff_list = []
+        curriculum_list = []
+        grades_list = []
+        
+        collection_keys = self.collections.keys()
+        
+        # 2. Sort collections, checking for MORE SPECIFIC names FIRST
+        for name in collection_keys:
+            # --- CHECK FOR SCHEDULES FIRST (MOST SPECIFIC) ---
+            if name.startswith("schedules_"):
+                schedule_student_list.append(name)
+            elif name.startswith("faculty_schedules_"):
+                schedule_faculty_list.append(name)
+            elif name.startswith("non_teaching_schedule_"):
+                schedule_staff_list.append(name)
+                
+            # --- CHECK FOR PROFILES SECOND (LESS SPECIFIC) ---
+            elif name.startswith("students_"):
+                student_list.append(name)
+            elif (
+                name.startswith("faculty_") or 
+                name.startswith("admin_") or 
+                name.startswith("non_teaching_faculty_") or 
+                name.startswith("teaching_faculty_")
+            ):
+                staff_list.append(name)
+                
+            # --- OTHER DATA TYPES ---
+            elif name.startswith("curriculum_"):
+                curriculum_list.append(name)
+            elif name.startswith("grades_"):
+                grades_list.append(name)
+            # 'general_info' and other specific collections are ignored, which is fine.
+
+        # 3. Store the Python LISTS for internal logic
+        self.student_collection_list = student_list
+        self.staff_collection_list = staff_list
+        self.staff_schedule_collection_list = schedule_staff_list
+
+        # 4. Convert lists to comma-separated STRINGS for the 'collection_filter' param
+        self.student_collections = ",".join(student_list)
+        self.staff_collections = ",".join(staff_list)
+        self.all_people_collections = ",".join(student_list + staff_list)
+        
+        self.student_schedule_collections = ",".join(schedule_student_list)
+        self.faculty_schedule_collections = ",".join(schedule_faculty_list)
+        self.staff_schedule_collections = ",".join(schedule_staff_list)
+        self.all_schedule_collections = ",".join(
+            schedule_student_list + schedule_faculty_list + schedule_staff_list
+        )
+
+        self.curriculum_collections = ",".join(curriculum_list)
+        self.grades_collections = ",".join(grades_list)
+
+        # 5. Log the results
+        self.debug("Dynamic collection groups built (v2 - Corrected):")
+        self.debug(f"  -> Students: {self.student_collections}")
+        self.debug(f"  -> Staff/Faculty/Admin: {self.staff_collections}")
+        self.debug(f"  -> Student Schedules: {self.student_schedule_collections}")
+        self.debug(f"  -> Staff/Faculty Schedules: {self.faculty_schedule_collections} | {self.staff_schedule_collections}")
+        self.debug(f"  -> Curriculums: {self.curriculum_collections}")
+        self.debug(f"  -> Grades: {self.grades_collections}")
+    # --- END OF REPLACEMENT ---
+
+    # --- ADD THIS ENTIRE NEW METHOD ---
 
     def _get_or_create_session(self, session_id: str) -> dict:
         """
@@ -457,30 +566,33 @@ class AIAnalyst:
             "content": "The user provided a conversational query. A standard greeting is appropriate.",
             "metadata": {"status": "success"}
         }]
+
+
+        
     
-    def get_school_info(self, topic: Any = None) -> List[dict]:
+    def get_school_info(self, info_type: Any = None) -> List[dict]:
         """
         [UPGRADED] A tool for retrieving general school information.
         """
-        self.debug(f"🛠️ Running upgraded tool: get_school_info for topic: {topic}")
+        self.debug(f"🛠️ Running upgraded tool: get_school_info for topic: {info_type}")
 
         filters = {}
         document_type_to_find = None
 
-        if isinstance(topic, str):
+        if isinstance(info_type, str):
             # --- ✨ NEW FIX: Check for keywords within the string ---
-            topic_lower = topic.lower()
-            if 'mission' in topic_lower or 'vision' in topic_lower:
+            info_type_lower = info_type.lower()
+            if 'mission' in info_type_lower or 'vision' in info_type_lower:
                 document_type_to_find = 'mission_vision'
             else:
-                document_type_to_find = topic_lower
+                document_type_to_find = info_type_lower
             # --- END NEW FIX ---
 
-        elif isinstance(topic, list) and topic:
+        elif isinstance(info_type, list) and info_type:
             # This handles the case where the planner correctly sends a list
-            document_type_to_find = "_".join(t.lower() for t in topic)
+            document_type_to_find = "_".join(t.lower() for t in info_type)
 
-        elif not topic:
+        elif not info_type:
             # Wildcard search for Institutional Identity.
             self.debug("-> No topic provided. Performing wildcard search for Institutional Identity.")
             filters = {'department': 'INSTITUTIONAL_IDENTITY'}
@@ -498,7 +610,7 @@ class AIAnalyst:
         # This line will now correctly map the pre-processed topic
         document_type_to_find = doc_type_map.get(document_type_to_find, document_type_to_find)
 
-        filters = {'document_type': document_type_to_find}
+        filters = {'info_type': document_type_to_find} # <-- CORRECT FIELD NAME
         return self.search_database(filters=filters)
     
     def query_curriculum(
@@ -518,10 +630,21 @@ class AIAnalyst:
 
         filters = {}
         doc_filters = []
-        query_text = "academic program curriculum" 
+ 
+
+        # --- START MODIFICATION ---
+        # Only set specific query_text if specific filters are provided
+        query_text = None 
+        if program and not (subject_code or subject_name):
+            query_text = f"curriculum for the {program} program"
+        elif subject_code:
+            query_text = f"curriculum for subject {subject_code}"
+        elif subject_name:
+            query_text = f"curriculum containing subject {subject_name}"
+        # If no specific filters, query_text remains None (will trigger wildcard search)
+        # --- END MODIFICATION ---
 
         # Build metadata filters for precise collection matching
-        query_text = "academic program curriculum" 
         if program:
             query_text = f"curriculum for the {program} program"
 
@@ -842,108 +965,102 @@ class AIAnalyst:
         ] + person_docs
     
 
+    # backend/utils/ai_core/analyst.py
 
-    
-        
-    def find_people(self, name: str = None, role: str = None, program: str = None, year_level: int = None, section: str = None, department: str = None, employment_status: str = None, n_results: int = 1000) -> List[dict]: # Add n_results=50 here
-        """
-        Tool (Unified): A powerful, single tool to find any person or group (students or faculty)
-        using a combination of filters.
-        """
+    # backend/utils/ai_core/analyst.py
 
+    def find_people(self, name: str = None, position: str = None, program: str = None, year_level: int = None, section: str = None, department: str = None, employment_status: str = None, n_results: int = 1000) -> List[dict]:
+        """
+        Tool (Unified & DYNAMIC V4 - FINAL): A powerful, single tool to find any person or group.
+        - Uses 'position' to match the database schema.
+        - Uses the dynamic 'all_generic_roles' list to intelligently
+          skip the position filter when a generic category (like "staff") is used.
+        """
         try:
             n_results = int(n_results)
         except (ValueError, TypeError):
             n_results = 1000
 
-        self.debug(f"Running MERGED tool: find_people with params: name='{name}', role='{role}', program='{program}', dept='{department}'")
+        self.debug(f"Running DYNAMIC V4 tool: find_people with params: name='{name}', position='{position}', program='{program}', dept='{department}'")
         filters = {}
         collection_filter = None
-
-
-
-        if isinstance(role, list) and len(role) == 1:
-            self.debug(f"-> Normalizing single-item role list {role} to a string.")
-            role = role[0]
-
-
-        # --- WILDCARD SEARCH: If no parameters are given, return all people ---
-        if not any([name, role, program, year_level, section, department, employment_status]):
-            self.debug("-> No parameters provided. Searching for all students and faculty.")
-            return self.search_database(query_text="*", collection_filter="students,faculty")
-
-        # Intelligently determine if the search is for students or faculty
-        is_student_query = False
-        if isinstance(role, str) and role.lower() == 'student':
-            is_student_query = True
-        elif isinstance(role, list) and 'student' in [r.lower() for r in role]:
-            is_student_query = True
         
-        if is_student_query or program or year_level or section:
-            self.debug("-> Query identified as a STUDENT search.")
-            collection_filter = "students"
+        if isinstance(position, list) and len(position) == 1:
+            self.debug(f"-> Normalizing single-item position list {position} to a string.")
+            position = position[0]
+
+        pos_str = str(position).lower().strip() if position else ""
+
+        # --- WILDCARD SEARCH (DYNAMIC) ---
+        if not any([name, position, program, year_level, section, department, employment_status]):
+            self.debug(f"-> No parameters provided. Searching ALL people collections: {self.all_people_collections}")
+            return self.search_database(query_text="*", collection_filter=self.all_people_collections, n_results=n_results)
+
+        # --- INTELLIGENT COLLECTION ROUTING ---
+        is_student_query = (
+            'student' in pos_str or
+            program or 
+            year_level or 
+            section
+        )
+        
+        if is_student_query:
+            self.debug(f"-> Query identified as a STUDENT search. Using: {self.student_collections}")
+            collection_filter = self.student_collections
             if program: filters['program'] = program
             if year_level: filters['year_level'] = year_level
             if section: filters['section'] = section
             
-            # This is safer than a wildcard search.
             if not filters and is_student_query and not name:
-                student_only_filter = {"student_id": {"$exists": True}}
-                return self.search_database(filters=student_only_filter, collection_filter=collection_filter)
+                return self.search_database(query_text="*", collection_filter=self.student_collections)
+        
+        else: # This handles faculty, admin, staff, registrar, librarian, etc.
+            self.debug(f"-> Query identified as a FACULTY/STAFF/ADMIN search. Using: {self.staff_collections}")
+            collection_filter = self.staff_collections
             
-            # If it's a student query but no specific filters were found, search all students.
-            if not filters and not name:
-                self.debug("-> No specific student filters. Searching for all students.")
-                return self.search_database(query_text="*", collection_filter="students")
-        else:
-            self.debug("-> Query identified as a FACULTY/STAFF search.")
-            collection_filter = "faculty"
-            
-            if role:
-                # Handle a list of roles using the '$in' operator
-                if isinstance(role, list):
-                    filters['position'] = {'$in': role}
-                elif isinstance(role, str):
-                    role_lower = role.lower()
-                    if 'faculty' in role_lower or 'professor' in role_lower:
-                        #Dynamically get all faculty types ---
-                        all_faculty_types = self._get_unique_faculty_types()
-                        if all_faculty_types:
-                            filters['faculty_type'] = {'$in': all_faculty_types}
-                        else:
-                            # Fallback if no types are found, just search by position
-                            filters['position'] = role.upper()
-                    else:
-                        filters['position'] = role.upper()
-
+            # --- THIS IS THE FINAL, CORRECT LOGIC ---
+            # We check if the 'position' the Planner sent is GENERIC or SPECIFIC
+            if position and (pos_str not in self.all_generic_roles):
+                # This is SPECIFIC (e.g., "Librarian", "Professor").
+                self.debug(f"-> Applying SPECIFIC position filter for: {position}")
+                if isinstance(position, list):
+                    filters['position'] = {'$in': [re.compile(p, re.IGNORECASE) for p in position]}
+                elif isinstance(position, str):
+                    filters['position'] = {'$regex': position, '$options': 'i'}
+            elif position:
+                # This is GENERIC (e.g., "staff", "admin", "library").
+                # We SKIP the position filter to get EVERYONE in the department.
+                self.debug(f"-> Detected GENERIC position '{position}'. Filtering by collection/dept, not by position title.")
+            # --- END OF FINAL LOGIC ---
+                
             if department and department.lower() != 'all':
                 filters['department'] = department
-
             if employment_status:
                 filters['employment_status'] = employment_status
 
-            # If it's a faculty query but no specific filters were found, search all faculty.
-            if not filters and not name:
-                self.debug("-> No specific faculty filters. Searching for all faculty.")
-                return self.search_database(query_text="*", collection_filter="faculty")
+            if not filters and not name and position:
+                 return self.search_database(query_text="*", collection_filter=self.staff_collections)
 
-        # Enhance the search with entity resolution if a name is provided
+        # --- NAME SEARCH LOGIC ---
         if name:
             self.debug(f"-> Name provided. Using robust entity resolution for '{name}'.")
             entity = self.resolve_person_entity(name=name)
             if entity and entity.get("aliases"):
                 filters['full_name'] = {"$in": entity["aliases"]}
-                if not role and not is_student_query:
-                    collection_filter = None # Search all collections if role is ambiguous
-                    self.debug("-> Name search with no role, searching all collections.")
+                
+                if not any([position, program, year_level, section, department]):
+                    collection_filter = self.all_people_collections
+                    self.debug(f"-> Name search with no role, searching all collections: {self.all_people_collections}")
             else:
                 return [{"status": "empty", "summary": f"Could not find anyone named '{name}'."}]
 
         if not filters:
-            return [{"status": "error", "summary": "Please provide criteria to find people."}]
+             return [{"status": "error", "summary": "Please provide criteria to find people."}]
         
         
-        return self.search_database(filters=filters, collection_filter=collection_filter, n_results=n_results) # Pass n_results down
+        self.debug(f"-> Executing search on collections: '{collection_filter}' with filters: {filters}")
+        return self.search_database(filters=filters, collection_filter=collection_filter, n_results=n_results)
+
     
     def get_person_schedule(self, person_name: str = None, program: str = None, year_level: int = None, section: str = None) -> List[dict]:
         """
@@ -1652,6 +1769,7 @@ class AIAnalyst:
         self.db_schema_summary = "\n".join(parts)
         self.debug("DB Schema for planner:\n", self.db_schema_summary)
         
+        
     def _resolve_placeholders(self, params: dict, step_results: dict) -> dict:
         """
         Recursively searches for and replaces placeholders (e.g., '$program_from_step_1')
@@ -2257,7 +2375,7 @@ class AIAnalyst:
             except Exception: self.debug("Final where_clause (non-serializable):", where_clause)
 
         for name, coll in self.collections.items():
-            if collection_filter and isinstance(collection_filter, str) and collection_filter not in name:
+            if collection_filter and isinstance(collection_filter, str) and name not in collection_filter:
                 continue
             try:
                 res = coll.query(
@@ -2419,14 +2537,25 @@ class AIAnalyst:
         sorted_results = sorted(all_results, key=lambda x: x.get('relevance', 0), reverse=True)
         
         return sorted_results
-        
+    
+
+
+    # backend/utils/ai_core/analyst.py
+# Find the existing 'execute_reasoning_plan' method and replace it with this entire block:
+
     def execute_reasoning_plan(self, query: str, session: dict) -> tuple[str, Optional[dict], List[dict]]:
         """
         [MODIFIED FOR SESSIONS & SUMMARY] The main orchestration method.
         """
         self.debug("Starting reasoning plan execution...")
         start_time = time.time()
-# --- THIS IS THE CORRECTED CODE ---
+        start_datetime = datetime.now(timezone.utc) # <-- 1. ADD THIS TIMESTAMP
+
+        # --- 2. ADD THESE VARIABLE INITIALIZERS ---
+        planner_duration = 0.0
+        retrieval_duration = 0.0
+        synth_duration = 0.0
+        # --- END OF ADDITION ---
 
         context = session.get("structured_context", {})
         if context.get("clarification_pending"):
@@ -2500,6 +2629,9 @@ class AIAnalyst:
 
             # ADD THIS ENTIRE BLOCK before the 'for attempt...' loop
 
+            # --- 3. ADD PLANNER START TIME ---
+            planner_start_time = time.time()
+
             # --- DYNAMIC PROMPT SELECTOR (FINAL VERSION) ---
             is_ambiguous = False
             stripped_query = query.strip().lower()
@@ -2566,7 +2698,14 @@ class AIAnalyst:
             
             if not tool_call_json:
                 outcome = "FAIL_PLANNER"
+
+                # --- 4. ADD PLANNER DURATION (ON FAILURE) ---
+                planner_duration = time.time() - planner_start_time
+
                 raise ValueError(f"AI failed to select a valid tool after {max_retries} attempts.")
+
+            # --- 5. ADD PLANNER DURATION (ON SUCCESS) ---
+            planner_duration = time.time() - planner_start_time
 
             # 2. Execute the validated tool call
             tool_name = tool_call_json["tool_name"]
@@ -2575,14 +2714,40 @@ class AIAnalyst:
             # --- NEW: DEDICATED PATH FOR CONVERSATIONAL QUERIES ---
             if tool_name == "answer_conversational_query":
                 self.debug("-> Handling conversational query with a dedicated synth call.")
+
+                # --- 6. ADD SYNTH START/END FOR CONVO ---
+                synth_start_time = time.time()
                 final_answer = self.synth_llm.execute(
                     system_prompt="You are a friendly and helpful AI assistant for PDM. Respond naturally and conversationally to the user.",
                     user_prompt=query,
                     history=chat_history or [],
                     phase="synth"
                 )
+                synth_duration = time.time() - synth_start_time
+                # --- END OF ADDITION ---
+
                 execution_time = time.time() - start_time
-                self.training_system.record_query_result(query=query, plan=plan_json, outcome="SUCCESS_CONVERSATIONAL", execution_time=execution_time, final_answer=final_answer, results_count=0)
+
+                # --- 7. MODIFY THIS LOGGING CALL ---
+                self.training_system.record_query_result(
+                    query=query, 
+                    plan=plan_json, 
+                    outcome="SUCCESS_CONVERSATIONAL", 
+                    execution_time=execution_time, 
+                    final_answer=final_answer, 
+                    results_count=0,
+                    
+                    # --- ADD THESE FIELDS ---
+                    timestamp=start_datetime,
+                    session_id=session.get('session_id'),
+                    planner_duration=planner_duration,
+                    retrieval_duration=0.0, # No retrieval done
+                    synth_duration=synth_duration,
+                    planner_model=self.planner_llm.planner_model,
+                    synth_model=self.synth_llm.synth_model,
+                    plan_hash=None # No plan hash for simple convo
+                    # --- END OF ADDITION ---
+                )
                 return final_answer, plan_json, []
             # --- END OF NEW PATH ---
 
@@ -2590,6 +2755,8 @@ class AIAnalyst:
             
             collected_docs = []
 
+            # --- 8. ADD RETRIEVAL START TIME ---
+            retrieval_start_time = time.time()
 
             tool_name = plan_json.get("plan", [{}])[0].get("tool_call", {}).get("tool_name")
             if tool_name == "request_clarification":
@@ -2601,6 +2768,9 @@ class AIAnalyst:
                 
                 # Extract the question for the user from the plan
                 question_for_user = plan_json["plan"][0]["tool_call"]["parameters"]["question_for_user"]
+
+                # --- 9. ADD RETRIEVAL DURATION (ON CLARIFICATION) ---
+                retrieval_duration = time.time() - retrieval_start_time
 
                 # Update the session in the database with the pending state
                 self._update_session_history(session['session_id'], query, question_for_user)
@@ -2654,14 +2824,26 @@ class AIAnalyst:
 
                 # --- ✨ TEMP FIX: De-duplicate results before sending to Synthesizer ---
             if collected_docs:
+
                 self.debug(f"Original unfiltered doc count: {len(collected_docs)}. Starting de-duplication...")
                 unique_docs = {}
                 for doc in collected_docs:
-                    # Use the document's 'content' as a unique key to filter out duplicates.
-                    content_key = doc.get('content')
+                    # --- START MODIFICATION ---
+                    # Get the content field
+                    content_value = doc.get('content')
+                    
+                    # Convert content to a hashable string key (JSON representation)
+                    # Use sort_keys=True for consistency if content is a dict
+                    try:
+                        content_key = json.dumps(content_value, sort_keys=True)
+                    except TypeError:
+                        # Fallback if content is somehow not JSON serializable (unlikely)
+                        content_key = str(content_value) 
+                        
+                    # Now use the guaranteed-string key for de-duplication
                     if content_key and content_key not in unique_docs:
-                        unique_docs[content_key] = doc
-                
+                         unique_docs[content_key] = doc
+                    # --- END MODIFICATION --- 
                 deduplicated_list = list(unique_docs.values())
                 self.debug(f"Found {len(deduplicated_list)} unique documents after de-duplication.")
                 # Replace the original list with the clean, de-duplicated one.
@@ -2718,6 +2900,9 @@ class AIAnalyst:
             self.debug("="*50 + "\n")
             # --- ✨ END: DEBUG CODE ---
 
+            # --- 10. ADD RETRIEVAL DURATION (ON SUCCESS/FALLBACK) ---
+            retrieval_duration = time.time() - retrieval_start_time
+
             # 4. Build the final context for the synthesizer
             if outcome in ["SUCCESS_DIRECT", "SUCCESS_FALLBACK"]:
                 results_count = len(collected_docs)
@@ -2733,6 +2918,13 @@ class AIAnalyst:
         # In the execute_reasoning_plan function...
 
         except Exception as e:
+            # --- 11. ADD DURATION CAPTURE (ON EXCEPTION) ---
+            if planner_duration == 0.0 and 'planner_start_time' in locals():
+                planner_duration = time.time() - planner_start_time
+            if retrieval_duration == 0.0 and 'retrieval_start_time' in locals():
+                retrieval_duration = time.time() - retrieval_start_time
+            # --- END OF ADDITION ---
+
             # ⬇️ REPLACE THE EXISTING DEBUG LINE WITH THESE THREE LINES ⬇️
             import traceback
             self.debug(f"An unexpected error occurred: {e}")
@@ -2748,6 +2940,10 @@ class AIAnalyst:
 
         # 5. Synthesize the final answer
         self.debug("Synthesizing final answer...")
+
+        # --- 12. ADD SYNTHESIZER START TIME ---
+        synth_start_time = time.time()
+
         context_for_llm = json.dumps(final_context, indent=2, ensure_ascii=False)
         synth_prompt = PROMPT_TEMPLATES["final_synthesizer"].format(context=context_for_llm, query=query)
         final_answer = self.synth_llm.execute(
@@ -2757,10 +2953,30 @@ class AIAnalyst:
             phase="synth"
         )
 
+        # --- 13. ADD SYNTHESIZER DURATION ---
+        synth_duration = time.time() - synth_start_time
+
         corruption_details = sorted(list(self.corruption_warnings)) if self.corruption_warnings else None
 
         # Record the results for training using the fully corrected signature
         execution_time = time.time() - start_time
+
+        # --- 14. ADD THIS BLOCK TO CALCULATE PLAN HASH FOR LOGGING ---
+        plan_hash = None
+        if plan_json and outcome.startswith("SUCCESS"):
+            try:
+                # This logic mirrors _save_dynamic_example to ensure consistency
+                simplified_plan = plan_json.get("plan", [{}])[0].get("tool_call", {})
+                if simplified_plan:
+                    templates = self.policy_engine.delexicalize(query, simplified_plan)
+                    plan_template = templates["plan_template"]
+                    canonical_plan_str = json.dumps(plan_template, sort_keys=True)
+                    plan_hash = hashlib.sha256(canonical_plan_str.encode('utf-8')).hexdigest()
+            except Exception as e:
+                self.debug(f"Error calculating plan_hash for logging: {e}")
+        # --- END OF ADDITION ---
+
+        # --- 15. MODIFY THE FINAL record_query_result CALL ---
         self.training_system.record_query_result(
             query=query,
             plan=plan_json,
@@ -2771,7 +2987,18 @@ class AIAnalyst:
             outcome=outcome,
             analyst_mode=self.execution_mode,
             final_answer=final_answer,
-            corruption_details=corruption_details
+            corruption_details=corruption_details,
+
+            # --- ADD ALL THE NEW FIELDS HERE ---
+            timestamp=start_datetime,
+            session_id=session.get('session_id'),
+            planner_duration=planner_duration,
+            retrieval_duration=retrieval_duration,
+            synth_duration=synth_duration,
+            planner_model=self.planner_llm.planner_model,
+            synth_model=self.synth_llm.synth_model,
+            plan_hash=plan_hash
+            # --- END OF NEW FIELDS ---
         )
 
         # --- NEW BLOCK 2: Save newly found entities to the session ---
@@ -2783,10 +3010,7 @@ class AIAnalyst:
 
         
         return final_answer, plan_json, collected_docs
-    
-    # -------------------------------
-# Function use for Web
-# -------------------------------
+        
     def web_start_ai_analyst(self, user_query: str, session_id: str):
         """
         [CORRECTED VERSION] Executes the AI plan for a specific user session.

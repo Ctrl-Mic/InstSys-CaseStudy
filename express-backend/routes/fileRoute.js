@@ -1,6 +1,17 @@
+/**
+ * The provided JavaScript code defines routes for file upload, retrieval, and deletion using Express
+ * and Multer in a Node.js application.
+ * @param filename - The `filename` parameter is a string that represents the name of a file, including
+ * its extension. It is used to identify a specific file within the context of file operations such as
+ * uploading, fetching, or deleting files. In the provided code snippet, the `filename` parameter is
+ * used when handling file
+ * @returns The code snippet provided is an Express router configuration for handling file uploads,
+ * listing files, and deleting files. It sets up routes for GET `/files`, POST `/upload`, and DELETE
+ * `/delete_upload/:category/:filename`.
+ */
 import express from "express";
 import fs from "fs";
-import path, { dirname } from "path";
+import path from "path";
 import multer from "multer";
 import { fileURLToPath } from "url";
 
@@ -11,37 +22,33 @@ const __outdirname = path.dirname(__dirname);
 
 // === CONFIG ===
 const UPLOAD_FOLDER = path.join(__outdirname, "utils/uploaded_files");
-const ALLOWED_EXTENSIONS = [".xlsx", ".json", ".pdf"];
 
-// === Multer setup ===
+// Simplify the storage configuration
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const folder = req.body.folder?.toLowerCase();
-    if (!["faculty", "students", "admin"].includes(folder)) {
-      return cb(new Error("Invalid folder"));
-    }
+  destination: function (req, file, cb) {
+    console.log("Multer processing request:", {
+      body: req.body,
+      file: file.originalname,
+    });
 
-    const targetFolder = path.join(UPLOAD_FOLDER, folder);
-    fs.mkdirSync(targetFolder, { recursive: true });
-    cb(null, targetFolder);
+    // Create base upload folder if it doesn't exist
+    fs.mkdirSync(UPLOAD_FOLDER, { recursive: true });
+
+    // Initially save to the base upload folder
+    // The actual file will be moved to the correct subfolder after upload
+    cb(null, UPLOAD_FOLDER);
   },
-  filename: (req, file, cb) => cb(null, file.originalname),
-});
-
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (ALLOWED_EXTENSIONS.includes(ext)) cb(null, true);
-    else cb(new Error("Invalid file type"));
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
   },
 });
+
+// Remove the file type checking from the backend since it's handled in the frontend
+const upload = multer({ storage });
 
 // === Helper ===
 function isAllowed(filename) {
-  return ALLOWED_EXTENSIONS.some((ext) =>
-    filename.toLowerCase().endsWith(ext)
-  );
+  return true; // All files are allowed
 }
 
 // === GET /files ===
@@ -59,7 +66,7 @@ router.get("/files", (req, res) => {
 
       if (stat.isDirectory()) {
         result[item] = getFilesRecursively(itemPath); // Recurse into subfolder
-      } else if (stat.isFile() && isAllowed(item)) {
+      } else if (stat.isFile()) {
         if (!result.files) result.files = [];
         result.files.push(item); // Add file to the current folder
       }
@@ -77,42 +84,64 @@ router.get("/files", (req, res) => {
   }
 });
 
+const VALID_FOLDERS = [
+  "student_list",
+  "student_grades",
+  "non_teaching_faculty",
+  "non_teaching_faculty_sched",
+  "teaching_faculty",
+  "teaching_faculty_sched",
+  "cor",
+  "admin",
+  "curriculum",
+  "general_info",
+];
+
 // === POST /upload ===
 router.post("/upload", upload.single("file"), (req, res) => {
   try {
-    const file = req.file;
-    const folder = req.body.folder?.toLowerCase();
+    console.log("Received upload request:", {
+      file: req.file?.originalname,
+      folder: req.body?.folder,
+      body: req.body,
+    });
 
-    if (!file) {
+    if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    if (!["faculty", "students", "admin"].includes(folder)) {
-      return res
-        .status(400)
-        .json({ message: "❌ Invalid folder. Must be faculty, students, or admin." });
+    const folder = req.body.folder;
+    if (!folder) {
+      return res.status(400).json({ message: "No folder specified" });
     }
 
+    // Remove folder validation since the modal now handles the folder naming
+    // We just need to ensure the folder exists
     const targetFolder = path.join(UPLOAD_FOLDER, folder);
-    const filepath = path.join(targetFolder, file.originalname);
+    fs.mkdirSync(targetFolder, { recursive: true });
 
-    // Check duplicate unless overwrite flag is true
-    if (fs.existsSync(filepath) && req.body.overwrite !== "true") {
-      return res.status(409).json({
-        message: `⚠️ File '${file.originalname}' already exists in ${folder}/. Overwrite?`,
-        duplicate: true,
-      });
-    }
+    console.log("Created target folder:", targetFolder);
 
-    // Replace existing file
-    fs.writeFileSync(filepath, fs.readFileSync(file.path));
+    // Move the file to the correct folder
+    const originalPath = req.file.path;
+    const targetPath = path.join(targetFolder, req.file.filename);
 
-    // (Optional) Rebuild AI collections here
-    // collections = collectData(data_dir, role, assign);
-    // ai = new AIAnalyst(collections, llm_config=full_config, execution_mode=api_mode);
+    fs.renameSync(originalPath, targetPath);
 
-    res.json({ message: "File uploaded successfully!", filename: file.originalname });
+    console.log("File uploaded successfully:", {
+      filename: req.file.filename,
+      folder: folder,
+      path: targetPath,
+    });
+
+    res.json({
+      message: "File uploaded successfully!",
+      filename: req.file.filename,
+      folder: folder,
+      path: targetPath,
+    });
   } catch (error) {
+    console.error("Upload error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -121,7 +150,11 @@ router.post("/upload", upload.single("file"), (req, res) => {
 router.delete("/delete_upload/:category/:filename", (req, res) => {
   const { category, filename } = req.params;
 
-  if (!["faculty", "students", "admin"].includes(category)) {
+  const matchedFolder = VALID_FOLDERS.find((validFolder) =>
+    category.includes(validFolder)
+  );
+
+  if (!matchedFolder) {
     return res.status(400).json({ error: "Invalid category" });
   }
 
@@ -135,9 +168,56 @@ router.delete("/delete_upload/:category/:filename", (req, res) => {
   try {
     fs.unlinkSync(filePath);
     res.json({ message: "File deleted" });
+    console.log(`Deleted file: ${filePath}`);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
+const handleFileChange = async (file, folder) => {
+  if (!file) return;
+
+  console.log("Uploading file:", file.name);
+  console.log("Target folder:", folder);
+
+  // ✅ Allowed file extensions
+  const allowedExtensions = [".xlsx", ".json", ".pdf"];
+
+  // Check if the file is one of the allowed types
+  if (!allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
+    alert("Only Excel (.xlsx), JSON (.json), and PDF (.pdf) files are allowed ❌");
+    return;
+  }
+
+  // 👉 Validate folder name
+  if (!folder || !VALID_FOLDERS.includes(folder.toLowerCase())) {
+    alert(`❌ Invalid choice. Please select one of: ${VALID_FOLDERS.join(", ")}`);
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("folder", folder.toLowerCase()); // ✅ send folder choice
+
+  try {
+    const response = await fetch("http://127.0.0.1:5000/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+    console.log("Upload response:", result);
+
+    if (response.ok) {
+      showPopup("success", "✅ Upload complete");
+      fetchFiles();
+    } else {
+      showPopup("error", result.message || "❌ Upload failed");
+    }
+  } catch (error) {
+    console.error("Upload failed:", error);
+    showPopup("error", "❌ Upload failed");
+  }
+};
 
 export default router;

@@ -70,7 +70,7 @@ PROMPT_TEMPLATES = {
         - Available Departments: {all_departments_list}
         - Available Staff Positions: {all_positions_list}
         - Available Employment Statuses: {all_statuses_list}
-        - Available School Info Topics: {all_doc_types_list}
+        - Available School Info info_type: {all_doc_types_list}
 
         --- CATEGORY 1: Name-Based Search Tools (ONLY IF THE name IS in the query) ---
         - `answer_question_about_person(person_name: str, question: str)`: **PRIMARY TOOL.** You **MUST** use this tool if the query contains a person's name AND asks for a **specific fact** (e.g., "what is the schedule of...", "phone number for...", "religion of...").
@@ -80,7 +80,11 @@ PROMPT_TEMPLATES = {
           **Use Case:** You **MUST** use this tool if the user's query contains a specific PDM-style ID (e.g., "PDM-XXXX-XXXX", "profile for PDM-XXXX-XXXX"). This is the most precise way to find a person.
 
         --- CATEGORY 2: Filter-Based Search Tools (NO name is in the query) ---
-        - `find_people(role: str, program: str, year_level: int, department: str, name: str)`: You **MUST** use this tool when the user is searching for a group of people using filters like program, role, or department, and just a part of a person's name like last name or first name (e.g., "escobar", "Michael", "Carpenter, Michael") (e.g., "show me all bscs students"). 
+        - `find_people(position: str, program: str, year_level: int, department: str, name: str)`: You **MUST** use this tool when the user is searching for a group of people using filters.
+        - Use `program`, `year_level`, `section` for **students**.
+        - Use `position` and `department` for **faculty, staff, and admins**.
+        - **IMPORTANT**: If the user asks for a generic group like "staff" or "admin", use that word for the `position` parameter. The tool is smart enough to handle it.
+        - **Example queries:** "show me all bscs students", "who is the College Dean?", "list all staff", "find staff in the registrar department"
 
 
         --- CATEGORY 3: Can Be Used with or Without a Name ---
@@ -99,7 +103,7 @@ PROMPT_TEMPLATES = {
         - `compare_schedules(person_a_name: str, person_b_name: str)`: Use when comparing the schedules of two named people.
 
         --- CATEGORY 5: General School Tools (What about the school itself?) ---
-        - `get_school_info(topic: str)`: 
+        - `get_school_info(info_type: str)`: 
           **Function:** Retrieves core institutional identity documents.
           **Use Case:** You **MUST** use this tool ONLY for queries about the school's **'mission', 'vision', 'history', or 'objectives'**. Anything about the school's identity itself.
 
