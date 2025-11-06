@@ -63,7 +63,7 @@ export function createStudentAccount({
   password,
   email,
   faceDescriptor, // New field
-  imagePath, // New field
+  image, // New field
 }) {
   const students = loadStudents();
 
@@ -77,16 +77,16 @@ export function createStudentAccount({
 
   const assignedRole = getRoleFromCourse(course);
 
-  // students[studentId] = {
-  //   studentName: fullName,
-  //   year,
-  //   course,
-  //   email,
-  //   password: hashedPassword,
-  //   role: assignedRole,
-  //   faceDescriptor, // Save face descriptor
-  //   imagePath, // Save image file path
-  // };
+  students[studentId] = {
+    studentName: fullName,
+    year: year,
+    course: course,
+    email: email,
+    password: hashedPassword,
+    role: assignedRole,
+    faceDescriptor, // Save face descriptor
+    image: image, // Save image
+  };
 
   const userDoc = {
     _id: studentId,
@@ -97,12 +97,12 @@ export function createStudentAccount({
     password: hashedPassword,
     role: assignedRole,
     faceDescriptor: faceDescriptor,
-    image: fs.readFileSync(imagePath),
+    image: image,
   }
 
   connection(); 
   register(userDoc);
-  fs.unlinkSync(imagePath);
+  saveStudents(students);
 
   return {
     message: "Student account created successfully",

@@ -1,40 +1,11 @@
 import express from "express";
-import multer from "multer";
-import path from "path";
-import { fileURLToPath } from "url";
-import { createStudentAccount } from "../utils/RBAC.js"; // adjust path if needed
+import { createStudentAccount } from "../utils/RBAC.js";
 
 const router = express.Router();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const __outdirname = path.dirname(__dirname);
 
-// Configure multer for file uploads
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadPath = path.join(__outdirname, "../express-backend/src/uploads");
-      cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-      const uniqueName = `${Date.now()}-${file.originalname}`;
-      cb(null, uniqueName);
-    },
-  }),
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === "image/jpeg") {
-      cb(null, true);
-    } else {
-      cb(new Error("Only JPEG files are allowed"));
-    }
-  },
-});
-
-// POST /register
-router.post("/register", upload.single("image"), (req, res) => {
+router.post("/register", async (req, res) => {
   try {
-    const { data } = req.body;
-    const parsedData = JSON.parse(data); // Parse the JSON string from the formData
+    const parsedData = req.body;
 
     console.log("Register route hit with data:", parsedData);
 
@@ -47,16 +18,15 @@ router.post("/register", upload.single("image"), (req, res) => {
       "year",
       "course",
       "password",
-      "faceDescriptor", // New field
+      "faceDescriptor",
+      "image", // ✅ new required field
     ];
 
-    // Check for missing fields
     const missing = requiredFields.filter((field) => !(field in parsedData));
     if (missing.length > 0) {
       return res.status(400).json({ error: `Missing fields: ${missing.join(", ")}` });
     }
 
-    // Map short course code to full course name
     const courseMap = {
       BSCS: "Bachelor of Science in Computer Science (BSCS)",
       BSIT: "Bachelor of Science in Information Technology (BSIT)",
@@ -69,24 +39,14 @@ router.post("/register", upload.single("image"), (req, res) => {
 
     const courseFull = courseMap[parsedData.course] || parsedData.course;
 
-    // Save the student account
+    // ✅ Save to your DB / JSON
     const result = createStudentAccount({
-      studentId: parsedData.studentId,
-      firstName: parsedData.firstName,
-      middleName: parsedData.middleName,
-      lastName: parsedData.lastName,
-      year: parsedData.year,
+      ...parsedData,
       course: courseFull,
-      password: parsedData.password,
-      email: parsedData.email,
-      faceDescriptor: parsedData.faceDescriptor, // Save face descriptor
-      imagePath: req.file ? req.file.path : null, // Save image file path
+      image: parsedData.image, // ✅ Base64 string directly saved
     });
 
-    if (result.error) {
-      return res.status(409).json(result);
-    }
-
+    if (result.error) return res.status(409).json(result);
     return res.json(result);
   } catch (err) {
     console.error("Register error:", err);

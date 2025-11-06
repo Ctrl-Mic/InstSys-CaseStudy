@@ -1,6 +1,6 @@
 {
-  "role": "admin",
+  "role": "Teaching_Faculty",
   "assign": [
-    ""
+    "BSCS"
   ]
 }

@@ -76,6 +76,8 @@ router.get("/:student_id", async (req, res) => {
       year: student.year,
       course: student.course,
       role: student.role,
+      img: student.image || null, // assuming image is stored directly
+      facedescriptor: student.faceDescriptor || null,
     };
 
     res.status(200).json(decryptedStudent);

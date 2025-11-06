@@ -37,7 +37,6 @@ app.use(
   })
 );
 
-app.use(express.json());
 
 // ✅ Health check route for frontend
 app.get("/health", (req, res) => {
@@ -56,6 +55,7 @@ app.get("/initialize/AI", async (req, res) => {
   }
 });
 
+app.use(express.json({ limit: "10mb" }));
 app.use("/", loginRoute);
 app.use("/student", fetchStudentRoute);
 app.use("/", refreshCollections);
