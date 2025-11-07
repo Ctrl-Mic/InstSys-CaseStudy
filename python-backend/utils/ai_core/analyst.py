@@ -74,9 +74,9 @@ class AIAnalyst:
             self.mongo_client = MongoClient(mongo_connection_string)
             self.mongo_db = self.mongo_client[mongo_db_name]
             self.mongo_client.admin.command('ping')
-            print(f"✅ Successfully connected to MongoDB database: '{mongo_db_name}'")
+            print(f"Successfully connected to MongoDB database: '{mongo_db_name}'")
         except Exception as e:
-            print(f"❌ Failed to connect to MongoDB: {e}")
+            print(f"Failed to connect to MongoDB: {e}")
             raise
             
         self.collections = {name: MongoCollectionAdapter(self.mongo_db[name]) for name in collections}

@@ -232,13 +232,14 @@ function Register({ goLogin }) {
       const res = await fetch(`${EXPRESS_API}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // <-- ensure this is present
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (res.ok) {
-        showPopup("success", "✅ Registration successful!");
-        navigate("/login");
+        showPopup("success", "✅ Verification code sent!");
+        navigate("/verify-code"); // <-- go to code verification page
       } else {
         showPopup("error", data.error || "❌ Registration failed.");
       }

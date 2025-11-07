@@ -1,7 +1,30 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import { createStudentAccount } from "../utils/RBAC.js";
+import nodemailer from "nodemailer";
 
 const router = express.Router();
+
+console.log(
+  "Loaded email credentials:",
+  process.env.EMAIL_USER,
+  process.env.EMAIL_PASS ? "[hidden]" : "undefined"
+);
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+console.log("✅ Gmail config:", {
+  user: process.env.EMAIL_USER,
+  hasPass: !!process.env.EMAIL_PASS
+});
 
 router.post("/register", async (req, res) => {
   try {
@@ -39,15 +62,27 @@ router.post("/register", async (req, res) => {
 
     const courseFull = courseMap[parsedData.course] || parsedData.course;
 
-    // ✅ Save to your DB / JSON
-    const result = createStudentAccount({
+    // Generate verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    console.log("Session object:", req.session);
+
+    // Store registration data and code in session
+    req.session.tempUser = {
       ...parsedData,
       course: courseFull,
-      image: parsedData.image, // ✅ Base64 string directly saved
+      verificationCode,
+    };
+
+    // Send code to user's email
+    await transporter.sendMail({
+      from: `"Ai-UI 2FA" <${process.env.EMAIL_USER}>`,
+      to: parsedData.email,
+      subject: "Your Ai-UI Verification Code",
+      text: `Your verification code is: ${verificationCode}`,
     });
 
-    if (result.error) return res.status(409).json(result);
-    return res.json(result);
+    return res.json({ message: "Verification code sent to your email. Please verify.", email: parsedData.email });
   } catch (err) {
     console.error("Register error:", err);
     return res.status(500).json({ error: "Server error during registration" });
