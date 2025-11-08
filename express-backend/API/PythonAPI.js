@@ -2,7 +2,7 @@ import axios from "axios";
 import cron from "node-cron";
 
 let execution_mode = 'offline';
-let isInitialized = false;
+let timeout = 3000;
 
 export async function callPythonAPI(userQuery, session_id = 22) {
   try {
@@ -24,16 +24,14 @@ export async function callPythonAPI(userQuery, session_id = 22) {
 async function networkChecker() {
   try {
 
-    const response = await axios.get(testUrl, {
+    const response = await axios.get("https://1.1.1.1", {
       timeout,
       headers: { "Cache-Control": "no-cache" },
       maxRedirects: 0,
       validateStatus: () => true,
     });
 
-    if (response.status === 204) {
-      return "online";
-    }
+    return (response.status >= 200 && response.status < 500) ? "online" : "offline";
 
   } catch (error) {
     return "offline";
@@ -42,39 +40,27 @@ async function networkChecker() {
 
 export async function configPythonAPI() {
 
-  if (isInitialized) {
-    return;
-  }
+  console.log("Startup Initialization");
+  cron.schedule("*/10 * * * * *", async function () {
+    
+    try {
+      const new_mode = await networkChecker();
+      if (new_mode !== execution_mode) {
 
-  try {
-    await axios.post('http://localhost:5001/v1/chat/prompt/status');
-    console.log("Startup Initialization");
-    isInitialized = true;
-  } catch (error) {
-    console.error("Error First Initialization");
-  }
-
-  if (!isInitialized) {
-    cron.schedule("*/10 * * * * *", async function () {
-      try {
-        const new_mode = await networkChecker();
-        if (new_mode !== execution_mode) {
-
-          execution_mode = new_mode;
-          console.log("Configuring AI");
-          try {
-            await axios.post(`http://localhost:5001/v1/chat/prompt/mode/${execution_mode}`, {
-              mode: execution_mode,
-            });
-            console.log(`CHANGING EXECUTION MODE ${execution_mode}`);
-          } catch (error) {
-            console.error("Error Updating Execution Mode:", error.message);
-          }
+        execution_mode = new_mode;
+        console.log("configuring AI");
+        try {
+          await axios.post(`http://localhost:5001/v1/chat/prompt/mode/${execution_mode}`, {
+            mode: execution_mode,
+          });
+          console.log(`CHANGING EXECUTION MODE ${execution_mode}`);
+        } catch (error) {
+          console.error("Error Updating Execution Mode:", error.message);
         }
-      } catch (error) {
-        console.error("Error Sending Execution Mode.");
-        throw error;
       }
-    });
-  }
+    } catch (error) {
+      console.error("Error Sending Execution Mode.");
+      throw error;
+    }
+  });
 }

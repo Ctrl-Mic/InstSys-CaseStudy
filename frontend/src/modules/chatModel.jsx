@@ -90,6 +90,10 @@ export default function ChatModel() {
           timestamp: time,
         },
       ]);
+
+      // 'image_map': {'by_id': {}, 'by_name': {}}
+      // data.response.image_map
+      // for images
     } catch (err) {
       console.warn("Backend offline — fallback mode");
 
