@@ -71,7 +71,7 @@ app.post("/v1/chat/prompt", async (req, res) => {
     }
 
     const response = await callPythonAPI(userQuery);
-    res.json(response);
+    return res.json(response);
   } catch (error) {
     console.error("Error in /v1/chat/prompt:", error.message);
     console.error("Error in /v1/chat/prompt:", error);

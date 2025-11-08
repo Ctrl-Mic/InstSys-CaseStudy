@@ -2,7 +2,6 @@ import uvicorn #type: ignore
 from fastapi.middleware.cors import CORSMiddleware #type: ignore
 from fastapi import FastAPI, Request, HTTPException#type: ignore
 from fastapi.responses import JSONResponse #type: ignore
-from src.config import Configuration
 from utils.run_ai import endpoint_connection
 
 app = FastAPI()
@@ -53,6 +52,7 @@ async def ChatPrompt(request: Request):
     
     user_query, session_id = data['query'], data['session_id']
     final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query, session_id=session_id)
+        
     print(f"response: {final_answer}")
     return JSONResponse({"response": final_answer}, status_code=201)
 

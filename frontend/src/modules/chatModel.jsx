@@ -57,10 +57,9 @@ export default function ChatModel() {
   //* =====================================
   async function sendInput(msg) {
     const finalMsg = msg ?? input;
-    console.log("sending input:", finalMsg);
     if (!finalMsg.trim()) return;
 
-    const userMsg = { sender: "user", text: finalMsg, timestamp: time };
+    const userMsg = { sender: "user", text  : finalMsg, timestamp: time };
     addMessage(userMsg);
 
     const msgToSend = finalMsg;
@@ -80,14 +79,14 @@ export default function ChatModel() {
       if (!res.ok) throw new Error("SERVER OFFLINE");
 
       const data = await res.json();
-      setSpeak(data.response);
+      setSpeak(data.response.ai_response);
 
       // Remove loading bubble & add real response
       setMessages((prev) => [
         ...prev.filter((m) => !m.loading),
         {
           sender: "bot",
-          text: data.response || "No response.",
+          text: data.response.ai_response || "No response.",
           timestamp: time,
         },
       ]);
