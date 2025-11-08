@@ -2845,6 +2845,7 @@ class AIAnalyst:
                 self.debug(f"Planner Attempt {attempt + 1}/{max_retries}...")
                 
                 # --- START: Prompt Generation (Now INSIDE the loop) ---
+                # --- START: Prompt Generation (Now INSIDE the loop) ---
                 is_ambiguous = False
                 if not filters_cleared_on_retry: # Only check ambiguity on the first pass
                     stripped_query = query.strip().lower()
@@ -2860,48 +2861,73 @@ class AIAnalyst:
                     self.debug("-> Ambiguity detected. Using 'Grounded Ambiguity Resolver Prompt'.")
                     sys_prompt = PROMPT_TEMPLATES["ambiguity_resolver_prompt"].format(db_schema_summary=self.db_schema_summary)
                     planner_user_prompt = query
-                else:
-                    self.debug("-> Query appears complete. Using 'Full Planner Prompt'.")
-                    dynamic_examples = self._load_dynamic_examples(query)
-                    if dynamic_examples:
-                        self.debug("Sanitizing dynamic examples string for fragile API...")
-                        dynamic_examples = dynamic_examples.replace('\n', ' ').replace('"', '\\"')
-
-                    # --- This is the new, combined logic ---
-                    full_context = session.get("structured_context", {})
+                
+                # --- NEW 422-AWARE PROMPT LOGIC ---
+                elif filters_cleared_on_retry:
+                    # This is a 422-RECOVERY ATTEMPT.
+                    self.debug("!!! 422 Recovery: Retrying with a minimal prompt (no context, no examples).")
+                    
+                    # 1. Use a completely empty context.
                     planner_context = {
-                        "current_topic": full_context.get("current_topic"),
-                        "active_filters": {} # Default to empty
+                        "current_topic": "None.",
+                        "active_filters": {}
                     }
-
-                    if filters_cleared_on_retry:
-                        # This is a retry *after* a 422. We force-clear the filters.
-                        self.debug("!!! 422 Recovery: Retrying with active_filters CLEARED.")
-                        # 'active_filters' is already {}, so we do nothing.
-                    
-                    else:
-                        # This is the first attempt. We use the "smart guess" logic.
-                        query_lower = query.strip().lower()
-                        new_topic_starters = ["who is", "what is", "what are", "show me", "list", "find", "get", "compare"]
-                        is_new_topic = any(query_lower.startswith(starter) for starter in new_topic_starters)
-                        
-                        if not is_new_topic:
-                            self.debug("Query seems like a follow-up. Passing active filters.")
-                            planner_context["active_filters"] = full_context.get("active_filters", {})
-                        else:
-                            self.debug("Query seems like a new topic. Wiping active filters for Planner.")
-                    
                     structured_context_str = json.dumps(planner_context, indent=2)
-                    self.debug(f"Sending pruned context to Planner: {structured_context_str}")
                     
+                    # 2. Use no dynamic examples.
+                    dynamic_examples = ""
+
+                    # 3. Set the system prompt.
                     sys_prompt = PROMPT_TEMPLATES["planner_agent"].format(
                         all_programs_list=self.all_programs,
                         all_departments_list=self.all_departments,
                         all_positions_list=self.all_positions,
                         all_doc_types_list=self.all_doc_types,
                         all_statuses_list=self.all_statuses,
-                        dynamic_examples=dynamic_examples,
-                        structured_context_str=structured_context_str
+                        dynamic_examples=dynamic_examples, # This is now ""
+                        structured_context_str=structured_context_str # This is now clean
+                    )
+                    planner_user_prompt = query
+
+                else:
+                    # This is a NORMAL FIRST ATTEMPT.
+                    self.debug("-> Query appears complete. Using 'Full Planner Prompt' with context.")
+                    
+                    # 1. Load dynamic examples.
+                    dynamic_examples = self._load_dynamic_examples(query)
+                    if dynamic_examples:
+                        self.debug("Sanitizing dynamic examples string for fragile API...")
+                        dynamic_examples = dynamic_examples.replace('\n', ' ').replace('"', '\\"')
+
+                    # 2. Load the "smart guess" context.
+                    full_context = session.get("structured_context", {})
+                    planner_context = {
+                        "current_topic": full_context.get("current_topic"),
+                        "active_filters": {} # Default to empty
+                    }
+                    
+                    query_lower = query.strip().lower()
+                    new_topic_starters = ["who is", "what is", "what are", "show me", "list", "find", "get", "compare"]
+                    is_new_topic = any(query_lower.startswith(starter) for starter in new_topic_starters)
+                    
+                    if not is_new_topic:
+                        self.debug("Query seems like a follow-up. Passing active filters.")
+                        planner_context["active_filters"] = full_context.get("active_filters", {})
+                    else:
+                        self.debug("Query seems like a new topic. Wiping active filters for Planner.")
+                    
+                    structured_context_str = json.dumps(planner_context, indent=2)
+                    self.debug(f"Sending pruned context to Planner: {structured_context_str}")
+                    
+                    # 3. Set the system prompt.
+                    sys_prompt = PROMPT_TEMPLATES["planner_agent"].format(
+                        all_programs_list=self.all_programs,
+                        all_departments_list=self.all_departments,
+                        all_positions_list=self.all_positions,
+                        all_doc_types_list=self.all_doc_types,
+                        all_statuses_list=self.all_statuses,
+                        dynamic_examples=dynamic_examples, # Populated
+                        structured_context_str=structured_context_str # Populated
                     )
                     planner_user_prompt = query
                 # --- END: Prompt Generation ---
@@ -2910,7 +2936,7 @@ class AIAnalyst:
                     system_prompt=sys_prompt,
                     user_prompt=planner_user_prompt,
                     json_mode=True, phase="planner",
-                    history=chat_history
+                    history=chat_history if not filters_cleared_on_retry else []
                 )
         
                 tool_call_json = self._repair_json(plan_raw)
@@ -3197,7 +3223,7 @@ class AIAnalyst:
         final_answer = self.synth_llm.execute(
             system_prompt="You are a careful AI analyst who provides conversational answers based only on the provided facts.",
             user_prompt=synth_prompt, 
-            history=chat_history or [],
+            history=chat_history if not filters_cleared_on_retry else [], # <-- THIS IS THE FIX
             phase="synth"
         )
 

@@ -77,9 +77,18 @@ class LLMService:
         # Assemble messages in the correct order: system, history, then user.
         messages = [{"role": "system", "content": system_prompt}]
         if history:
-            messages.extend(history)
+            # --- THIS IS THE FIX ---
+            # Explicitly strip any extra keys (like 'topic_id') that are
+            # not supported by the external API.
+            cleaned_history = [
+                {"role": msg.get("role"), "content": msg.get("content")}
+                for msg in history
+            ]
+            messages.extend(cleaned_history)
+            # --- END OF FIX ---
         messages.append({"role": "user", "content": user_prompt})
 
+        # This call is now safe, as 'messages' contains only clean objects
         api_url, headers, payload = self._prepare_request(messages, json_mode, phase=phase)
         if not api_url:
             return "Configuration Error: API URL is not set."
