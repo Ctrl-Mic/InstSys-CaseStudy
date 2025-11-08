@@ -35,9 +35,9 @@ class DatabaseImageInitializer:
             self.client.admin.command('ping')
             self.db = self.client[database_name]
             self.collections = collections_to_process
-            print(f"Successfully connected to MongoDB database: '{database_name}'")
+            print(f"✅ Successfully connected to MongoDB database: '{database_name}'")
         except Exception as e:
-            print(f"Could not connect to MongoDB: {e}")
+            print(f"❌ Could not connect to MongoDB: {e}")
             sys.exit(1)
 
         self.total_students_processed = 0
