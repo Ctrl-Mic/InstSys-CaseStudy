@@ -87,7 +87,7 @@ app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded (use field name 'file')" });
     }
-    
+
     const { originalname, buffer } = req.file;
     const ext = path.extname(originalname).toLowerCase();
 
@@ -113,6 +113,7 @@ app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
     };
 
     const saved = await upload(filePayload);
+
     if (!saved) return res.status(500).json({ success: false, error: "Upload failed" });
     if (saved.status === 409) return res.status(409).json(saved);
 

@@ -30,29 +30,6 @@ from .prompts import PROMPT_TEMPLATES
 from .training import TrainingSystem
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class AIAnalyst:
     """
     The main class that orchestrates the entire process of analyzing a user query.
@@ -61,7 +38,7 @@ class AIAnalyst:
     """
     # In LLM_model.py, inside the AIAnalyst class:
 
-    def __init__(self, collections: List[str], llm_config: Optional[dict] = None, execution_mode: str = "offline"):
+    def __init__(self, collections: List[str], llm_config: Optional[dict] = None, execution_mode: str = "online"):
         """
         [MODIFIED] Initializes the AI Analyst with a MongoDB connection.
         """
@@ -3051,11 +3028,13 @@ class AIAnalyst:
 
         if not synced_structured_data:
             synced_structured_data = collected_docs
-
+            
+        image_map = self._create_image_map(final_answer)
         # 6. Assemble and return the final response
         final_response = {
             "ai_response": final_answer,
-            "structured_data": synced_structured_data
+            "structured_data": synced_structured_data,
+            "image_map": image_map
         }
 
         return final_response
