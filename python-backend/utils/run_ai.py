@@ -104,7 +104,7 @@ def endpoint_connection():
     config_path = Path("config/config.json")
     config = load_config(config_path)
     collections = list_all_collections(config)
-    
+        
     return AIAnalyst(collections=collections, llm_config=config)
 
 def main():
