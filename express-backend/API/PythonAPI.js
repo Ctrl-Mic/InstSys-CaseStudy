@@ -5,6 +5,7 @@ let execution_mode = 'offline';
 let timeout = 3000;
 
 export async function callPythonAPI(userQuery, session_id = 22) {
+  console.log("calling python API");
   try {
 
     if (!userQuery || !session_id) throw new Error("Missing query");
@@ -42,7 +43,7 @@ export async function configPythonAPI() {
 
   console.log("Startup Initialization");
   cron.schedule("*/10 * * * * *", async function () {
-    
+
     try {
       const new_mode = await networkChecker();
       if (new_mode !== execution_mode) {

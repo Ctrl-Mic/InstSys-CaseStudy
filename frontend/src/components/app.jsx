@@ -4,6 +4,7 @@ import Dashboard from "../modules/dashboard.jsx";
 import Register from "../modules/register.jsx";
 import ChatPrompt from "../modules/chatPrompt.jsx";
 import Account from "./account.jsx";
+import VerifyCode from "../modules/VerifyCode.jsx";
 import { useState } from "react";
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
 
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-code" element={<VerifyCode />} />
 
         <Route
           path="/dashboard"

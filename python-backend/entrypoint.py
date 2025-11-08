@@ -15,14 +15,7 @@ app.add_middleware(
 
 # ----------------------Route---------------------- 
 
-ai_analyst = None
-
-
-@app.post("/v1/chat/prompt/status")
-async def status():
-    global ai_analyst
-    ai_analyst = endpoint_connection()
-    print(f"AI analyst: Initialized successfully")
+ai_analyst = endpoint_connection()
 
 @app.post("/v1/chat/prompt/mode/{mode}")
 async def change_mode(mode: str):
@@ -30,15 +23,15 @@ async def change_mode(mode: str):
     
     valid_modes = ["online", "offline"]
     if mode not in valid_modes:
-        raise HTTPException(status_code=400, detail="Invalide Execution mode.")
+        raise HTTPException(status_code=400, detail="Invalid Execution mode.")
     print(f"execution mode: {mode}")
     if ai_analyst is None:
         raise HTTPException(status_code=400, detail="AI Analyst not initialized.")
-    
+    print(f"{mode}")    
+
     ai_analyst.execution_mode = mode
     print(f" Execution mode set to: {mode}")
     
-
 @app.post("/v1/chat/prompt/response")
 async def ChatPrompt(request: Request):
     global ai_analyst
@@ -55,7 +48,6 @@ async def ChatPrompt(request: Request):
         
     print(f"response: {final_answer}")
     return JSONResponse({"response": final_answer}, status_code=201)
-
 
 # ----------------------Route----------------------
 
