@@ -171,6 +171,7 @@ class AdminAnalyst:
             if "ImportError" in str(e):
                 print("   Hint: Did you run 'pip install matplotlib'?")
 
+
     def execute_plan(self, query: str) -> dict:
         """
         Full end-to-end execution for an admin query.
@@ -274,9 +275,6 @@ class AdminAnalyst:
             pprint.pprint(chart_data)
             print("-------------------------------")
 
-            # --- MODIFIED SECTION ---
-            # Define a consistent filename to overwrite
             chart_filename = "admin_report_chart.png"
-            # Call the new chart generation method
+
             self._generate_chart_image(chart_data, q, chart_filename)
-            # --- END OF MODIFICATION ---

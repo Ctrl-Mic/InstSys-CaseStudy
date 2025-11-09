@@ -16,18 +16,88 @@ class PolicyEngine:
         
         # Load the small English SpaCy model.
         # This happens once when the AIAnalyst starts.
+# Load the small English SpaCy model.
+        # This happens once when the AIAnalyst starts.
         try:
             self.nlp = spacy.load("en_core_web_sm")
-            print("✅ SpaCy NLP model ('en_core_web_sm') loaded successfully for PolicyEngine.")
+            # --- THIS IS THE NEW LINE ---
+            self.stopwords = self.nlp.Defaults.stop_words
+            print("✅ SpaCy NLP model ('en_core_web_sm') and stopwords loaded successfully for PolicyEngine.")
+            self.debug = print
         except OSError:
             print("❌ SpaCy model not found. Please run: python -m spacy download en_core_web_sm")
             self.nlp = None
+            # --- THIS IS THE NEW LINE (FALLBACK) ---
+            self.stopwords = set() # Use an empty set as a fallback
 
     # In policy_engine.py
 
     # In backend/utils/ai_core/policy_engine.py
 
 # --- REPLACE THE ENTIRE delexicalize METHOD WITH THIS ---
+
+    def is_data_like(self, query: str) -> bool:
+            """
+            [NEW] Uses SpaCy's POS tagger to determine if a vague query
+            contains "data-like" tokens (nouns, numbers, proper nouns)
+            vs. gibberish or non-data tokens.
+            """
+            if not self.nlp:
+                return False # Safety check
+
+            doc = self.nlp(query.lower())
+            if not doc:
+                return False
+
+            # Tags that indicate the user is providing data/entities
+            # PROPN: Proper Noun (e.g., "BSCS", "Mark")
+            # NOUN: Noun (e.g., "year", "schedule")
+            # NUM: Number (e.g., "2", "4")
+            # ADJ: Adjective (often used for ordinals like "2nd", "4th")
+            data_like_tags = {'PROPN', 'NOUN', 'NUM', 'ADJ'}
+
+            for token in doc:
+                if token.pos_ in data_like_tags:
+                    self.debug(f"NLP Data-Like Check: Found data token '{token.text}' ({token.pos_}). Flagging as answer-like.")
+                    return True
+            
+            self.debug(f"NLP Data-Like Check: No data-like tokens found. Flagging as ambiguous.")
+            return False
+
+
+    def is_interrogative(self, query: str) -> bool:
+        """
+        [NEW] Uses SpaCy's Part-of-Speech (POS) tagger to determine
+        if a query is a question.
+        
+        It checks if the first token is a "wh-word" (like what, who,
+        where, when, which).
+        """
+        if not self.nlp:
+            return False # Safety check
+
+        doc = self.nlp(query.lower())
+        if not doc:
+            return False
+
+        first_token = doc[0]
+        
+        # Check for SpaCy's "wh-word" tags:
+        # WDT: Wh-determiner (what, which)
+        # WP:  Wh-pronoun (who, whom, what)
+        # WP$: Possessive wh-pronoun (whose)
+        # WRB: Wh-adverb (where, when, how, why)
+        if first_token.tag_ in {'WDT', 'WP', 'WP$', 'WRB'}:
+            self.debug(f"NLP Interrogative Check: Query starts with '{first_token.text}' ({first_token.tag_}). Flagging as question.")
+            return True
+            
+        # Add a check for auxiliary-led questions (e.g., "Is this...")
+        if first_token.pos_ == 'AUX':
+            self.debug(f"NLP Interrogative Check: Query starts with auxiliary '{first_token.text}'. Flagging as question.")
+            return True
+
+        self.debug(f"NLP Interrogative Check: Query does not appear to be a question.")
+        return False
 
     def delexicalize(self, query: str, plan: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -84,6 +154,55 @@ class PolicyEngine:
             "user_pattern": user_pattern,
             "plan_template": plan_template
         }
+    
+
+    def is_query_vague_nlp(self, query: str) -> bool:
+        """
+        [NEW] Uses SpaCy's dependency parser to check for "dangling nouns."
+        
+        This detects queries that use a target-required noun (like 'adviser'
+        or 'schedule') without specifying *which one* (e.g., "adviser of BSCS"
+        or "BSCS schedule"). This is far more robust than a fixed list.
+        """
+        if not self.nlp:
+            return False # Safety check if SpaCy isn't loaded
+
+        doc = self.nlp(query)
+
+        # Nouns that MUST have a target to be unambiguous
+        # We use lemmas to catch plurals (e.g., "schedules" -> "schedule")
+        TARGET_REQUIRED_NOUNS = {
+            "adviser",
+            "schedule",
+            "grade",
+            "dean",
+            "head",
+            "president"
+        }
+        
+        # Modifiers that "save" a noun from being vague
+        # pobj: "adviser *of BSCS*" (prepositional object)
+        # dobj: "get *the schedule*" (direct object, if the noun isn't the object)
+        # compound: "*BSCS* schedule" (compound noun)
+        # nsubj: "*Maria's* schedule" (nominal subject)
+        SAVING_MODIFIERS = {"pobj", "dobj", "compound", "nsubj", "poss"}
+
+        for token in doc:
+            if token.lemma_ in TARGET_REQUIRED_NOUNS:
+                # The noun is in our list. Now, check if it has any "saving" modifiers.
+                has_modifier = False
+                for child in token.children:
+                    if child.dep_ in SAVING_MODIFIERS:
+                        has_modifier = True
+                        break
+                
+                # This is a dangling, ambiguous noun.
+                if not has_modifier:
+                    print(f"NLP Vague Check: Found dangling noun '{token.text}'. Flagging as ambiguous.")
+                    return True
+        
+        # No dangling nouns found
+        return False
 
 
 
