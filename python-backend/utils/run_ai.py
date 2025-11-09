@@ -3,6 +3,8 @@ import sys
 import json
 from pathlib import Path
 import os
+from utils.ai_core.admin_analyst import AdminAnalyst
+
 # --- Exception placeholder you can expand later --------------------------------
 class CustomPlaceholderError(Exception):
     """
@@ -105,7 +107,7 @@ def endpoint_connection():
     config = load_config(config_path)
     collections = list_all_collections(config)
     
-    return AIAnalyst(collections=collections, llm_config=config)
+    return AIAnalyst(collections=collections , llm_config=config), AdminAnalyst(llm_config=config)
 
 def main():
     """

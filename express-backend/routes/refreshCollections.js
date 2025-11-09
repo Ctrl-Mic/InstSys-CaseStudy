@@ -33,7 +33,6 @@ router.post("/refresh_collections", (req, res) => {
     role = lastRoleAssign.role || "Admin";
     assign = lastRoleAssign.assign || ["BSCS"];
 
-    console.log(`\n\n\nRefreshed collections for role: ${role}, assign: ${assign}\n\n\n`);
   } catch (err) {
     role = "Admin";
     assign = ["BSCS"];

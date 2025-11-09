@@ -2,8 +2,8 @@ import uvicorn #type: ignore
 from fastapi.middleware.cors import CORSMiddleware #type: ignore
 from fastapi import FastAPI, Request, HTTPException#type: ignore
 from fastapi.responses import JSONResponse #type: ignore
-from src.config import Configuration
 from utils.run_ai import endpoint_connection
+from utils.mongo_image_mapper import build_image_map_from_mongo
 
 app = FastAPI()
 app.add_middleware(
@@ -16,18 +16,19 @@ app.add_middleware(
 
 # ----------------------Route---------------------- 
 
-ai_analyst = None
+ai_analyst, ai_chart = endpoint_connection()
+requestChart = False
+requestImage = False
 
-
-@app.post("/v1/chat/prompt/status")
-async def status():
-    global ai_analyst
-    ai_analyst = endpoint_connection()
-    print(f"AI analyst: Initialized successfully")
+@app.post("/v1/chat/prompt/requestmode")
+async def request_mode(mode: bool):
+    global requestChart, requestImage
+    
+    requestChart, requestImage = mode["ReqChart"], mode["ReqImage"]
 
 @app.post("/v1/chat/prompt/mode/{mode}")
 async def change_mode(mode: str):
-    global ai_analyst, settings
+    global ai_analyst
     
     valid_modes = ["online", "offline"]
     if mode not in valid_modes:
@@ -39,7 +40,6 @@ async def change_mode(mode: str):
     ai_analyst.executiona_mode = mode
     print(f" Execution mode set to: {mode}")
     
-
 @app.post("/v1/chat/prompt/response")
 async def ChatPrompt(request: Request):
     global ai_analyst
@@ -53,7 +53,6 @@ async def ChatPrompt(request: Request):
     user_query = data['query']
     final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query)
     return JSONResponse({"response": final_answer}, status_code=201)
-
 
 # ----------------------Route----------------------
 
