@@ -32,17 +32,17 @@ async def change_mode(mode: str):
     
     valid_modes = ["online", "offline"]
     if mode not in valid_modes:
-        raise HTTPException(status_code=400, detail="Invalid Execution mode.")
-    print(f"execution mode: {mode}")
+        raise HTTPException(status_code=400, detail="Invalide Execution mode.")
+    
     if ai_analyst is None:
         raise HTTPException(status_code=400, detail="AI Analyst not initialized.")
-
-    ai_analyst.execution_mode = mode
+    
+    ai_analyst.executiona_mode = mode
+    print(f" Execution mode set to: {mode}")
     
 @app.post("/v1/chat/prompt/response")
 async def ChatPrompt(request: Request):
-    global ai_analyst, requestChart, requestImage
-    print("calling chatprompt")
+    global ai_analyst
     if ai_analyst is None:
         raise HTTPException(status_code=400, detail="AI Analyst not configured.")
     
@@ -50,19 +50,8 @@ async def ChatPrompt(request: Request):
     if not data or 'query' not in data:
         raise HTTPException(status_code=400, detail="Missing query")
     
-    user_query, session_id = data['query'], data['session_id']
-    
-    if not requestChart or None:    
-        final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query, session_id=session_id)
-        
-        if requestImage:
-            image_map = build_image_map_from_mongo(final_answer["structure_data"])
-            return JSONResponse({"response": final_answer, "image": image_map}, status_code=201)
-    else:
-        data = ai_chart.execute_plan(user_quer= user_query)
-        final_answer, chart_data = data.get("report"), data.get("chart_data", [])
-        ai_chart._generate_chart_image(chart_data, "chart")
-        
+    user_query = data['query']
+    final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query)
     return JSONResponse({"response": final_answer}, status_code=201)
 
 # ----------------------Route----------------------

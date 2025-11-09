@@ -89,13 +89,13 @@ def list_all_collections(config: dict):
             discovered = [c for c in discovered if c not in blacklist]
 
         if not discovered:
-            print("No user collections discovered; falling back to static defaults.")
+            print("⚠️ No user collections discovered; falling back to static defaults.")
             return ["students_ccs", "schedules_ccs"]
 
         return sorted(discovered)
 
     except Exception as e:
-        print(f"Could not discover collections from MongoDB: {e}")
+        print(f"⚠️ Could not discover collections from MongoDB: {e}")
         print("   Falling back to static defaults.")
         return ["students_ccs", "schedules_ccs"]
     
