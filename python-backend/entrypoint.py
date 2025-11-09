@@ -50,8 +50,8 @@ async def ChatPrompt(request: Request):
     if not data or 'query' not in data:
         raise HTTPException(status_code=400, detail="Missing query")
     
-    user_query = data['query']
-    final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query)
+    user_query, session_id = data['query'], data['session_id']
+    final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query, session_id= session_id)
     return JSONResponse({"response": final_answer}, status_code=201)
 
 # ----------------------Route----------------------

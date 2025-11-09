@@ -16,7 +16,7 @@ export async function callPythonAPI(userQuery, session_id = 22) {
 
     return response.data;
   } catch (error) {
-    console.error("Error calling Python API:", error.response?.data || error.message);
+    console.error("Error calling Python AP  I:", error.response?.data || error.message);
     throw error;
   }
 }

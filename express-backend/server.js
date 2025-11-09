@@ -127,13 +127,13 @@ app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
 
 app.post("/v1/chat/prompt", async (req, res) => {
   try {
-    const { userQuery } = req.body;
-    console.log("Received request to /v1/chat/prompt with query:", userQuery);
+    const { query } = req.body;
+    console.log("Received request to /v1/chat/prompt with query:", query);
 
-    if (!userQuery) {
+    if (!query) {
       return res.status(400).json({ error: "Missing query parameter" });
     }
-    const response = await callPythonAPI(userQuery);
+    const response = await callPythonAPI(query);
     res.json(response);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch data from Python API" });
