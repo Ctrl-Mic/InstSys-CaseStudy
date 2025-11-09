@@ -16,7 +16,7 @@ import coursesRoute from "./routes/coursesRoute.js";
 import fileRoute from "./routes/fileRoute.js";
 import twoFactorVerificationRoute from "./routes/twoFactorVerificationRoute.js";
 import { connection, upload } from "./src/modules/modules.connection.js";
-import { callPythonAPI, configPythonAPI } from "./API/PythonAPI.js";
+import { callPythonAPI, configPythonAPI, requestmode } from "./API/PythonAPI.js";
 import Filemeta from "./src/utils/cons.js";
 
 console.log("✅ registerRoute.js env check:", {
@@ -78,6 +78,7 @@ app.use("/", registerRoute);
 app.use("/", coursesRoute);
 app.use("/", fileRoute);
 app.use("/", twoFactorVerificationRoute); // <-- Add this line
+app.use("v1/request/mode", requestmode); // 
 
 // ✅ File upload endpoint
 app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
@@ -126,13 +127,12 @@ app.post("/v1/upload/file", memoryUpload.single("file"), async (req, res) => {
 
 app.post("/v1/chat/prompt", async (req, res) => {
   try {
-    const { query: userQuery } = req.body;
+    const { userQuery } = req.body;
     console.log("Received request to /v1/chat/prompt with query:", userQuery);
 
     if (!userQuery) {
       return res.status(400).json({ error: "Missing query parameter" });
     }
-    console.log("test");
     const response = await callPythonAPI(userQuery);
     res.json(response);
   } catch (error) {

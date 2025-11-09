@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware #type: ignore
 from fastapi import FastAPI, Request, HTTPException#type: ignore
 from fastapi.responses import JSONResponse #type: ignore
 from utils.run_ai import endpoint_connection
+from utils.mongo_image_mapper import build_image_map_from_mongo
 
 app = FastAPI()
 app.add_middleware(
@@ -15,11 +16,19 @@ app.add_middleware(
 
 # ----------------------Route---------------------- 
 
-ai_analyst = endpoint_connection()
+ai_analyst, ai_chart = endpoint_connection()
+requestChart = False
+requestImage = False
+
+@app.post("/v1/chat/prompt/requestmode")
+async def request_mode(mode: bool):
+    global requestChart, requestImage
+    
+    requestChart, requestImage = mode["ReqChart"], mode["ReqImage"]
 
 @app.post("/v1/chat/prompt/mode/{mode}")
 async def change_mode(mode: str):
-    global ai_analyst, settings
+    global ai_analyst
     
     valid_modes = ["online", "offline"]
     if mode not in valid_modes:
@@ -27,14 +36,12 @@ async def change_mode(mode: str):
     print(f"execution mode: {mode}")
     if ai_analyst is None:
         raise HTTPException(status_code=400, detail="AI Analyst not initialized.")
-    print(f"{mode}")    
 
     ai_analyst.execution_mode = mode
-    print(f" Execution mode set to: {mode}")
     
 @app.post("/v1/chat/prompt/response")
 async def ChatPrompt(request: Request):
-    global ai_analyst
+    global ai_analyst, requestChart, requestImage
     print("calling chatprompt")
     if ai_analyst is None:
         raise HTTPException(status_code=400, detail="AI Analyst not configured.")
@@ -44,9 +51,18 @@ async def ChatPrompt(request: Request):
         raise HTTPException(status_code=400, detail="Missing query")
     
     user_query, session_id = data['query'], data['session_id']
-    final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query, session_id=session_id)
+    
+    if not requestChart or None:    
+        final_answer = ai_analyst.web_start_ai_analyst(user_query=user_query, session_id=session_id)
         
-    print(f"response: {final_answer}")
+        if requestImage:
+            image_map = build_image_map_from_mongo(final_answer["structure_data"])
+            return JSONResponse({"response": final_answer, "image": image_map}, status_code=201)
+    else:
+        data = ai_chart.execute_plan(user_quer= user_query)
+        final_answer, chart_data = data.get("report"), data.get("chart_data", [])
+        ai_chart._generate_chart_image(chart_data, "chart")
+        
     return JSONResponse({"response": final_answer}, status_code=201)
 
 # ----------------------Route----------------------

@@ -3029,12 +3029,10 @@ class AIAnalyst:
         if not synced_structured_data:
             synced_structured_data = collected_docs
             
-        image_map = self._create_image_map(final_answer)
         # 6. Assemble and return the final response
         final_response = {
             "ai_response": final_answer,
             "structured_data": synced_structured_data,
-            "image_map": image_map
         }
 
         return final_response

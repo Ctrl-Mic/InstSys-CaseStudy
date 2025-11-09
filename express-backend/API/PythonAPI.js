@@ -5,14 +5,13 @@ let execution_mode = 'offline';
 let timeout = 3000;
 
 export async function callPythonAPI(userQuery, session_id = 22) {
-  console.log("calling python API");
   try {
 
     if (!userQuery || !session_id) throw new Error("Missing query");
 
     const response = await axios.post(
       "http://localhost:5001/v1/chat/prompt/response",
-      { query: userQuery, session_id: session_id },
+      { query: userQuery, session_id: session_id},
     );
 
     return response.data;
@@ -22,16 +21,31 @@ export async function callPythonAPI(userQuery, session_id = 22) {
   }
 }
 
+//  ###################################################
+//  toggle switch for Admin mode and Show student Image
+//  ###################################################
+
+export async function requestmode(req, res) {
+
+  try {
+    await axios.post(
+      "http://localhost:5001/v1/chat/prompt/requestmode",
+      {ReqChart: Chart, ReqImage: image}
+    )
+  } catch ( error ) {
+    console.error("Error calling Python API:", error.response?.data || error.message);
+  }
+}
+
 async function networkChecker() {
   try {
 
-    const response = await axios.get("https://1.1.1.1", {
+    const response = await axios.get("https://clients3.google.com/generate_204", {
       timeout,
       headers: { "Cache-Control": "no-cache" },
       maxRedirects: 0,
       validateStatus: () => true,
     });
-
     return (response.status >= 200 && response.status < 500) ? "online" : "offline";
 
   } catch (error) {
