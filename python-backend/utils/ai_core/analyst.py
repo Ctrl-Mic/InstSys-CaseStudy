@@ -270,11 +270,17 @@ class AIAnalyst:
         self.student_collection_list = student_list
         self.staff_collection_list = staff_list
         self.staff_schedule_collection_list = schedule_staff_list
+        self.student_schedule_collection_list = schedule_student_list
+        self.faculty_schedule_collection_list = schedule_faculty_list
+        self.staff_schedule_collection_list = schedule_staff_list
+
+        
 
         # 4. Convert lists to comma-separated STRINGS for the 'collection_filter' param
         self.student_collections = ",".join(student_list)
         self.staff_collections = ",".join(staff_list)
         self.all_people_collections = ",".join(student_list + staff_list)
+        
         
         self.student_schedule_collections = ",".join(schedule_student_list)
         self.faculty_schedule_collections = ",".join(schedule_faculty_list)
@@ -549,15 +555,20 @@ class AIAnalyst:
             session["mentioned_entities"] = session["mentioned_entities"][-5:]
 
         # Persist the change to the database
+# Update the timestamp
         session["updated_at"] = datetime.now(timezone.utc)
+
+        # --- THIS IS THE FIX ---
+        # We must remove the _id field from the session object before
+        # using it in $set, as _id is immutable.
+        session.pop("_id", None)
+        # --- END OF FIX ---
+
+        # Save the entire updated session object to MongoDB
         self.sessions_collection.update_one(
             {"session_id": session_id},
-            {"$set": {
-                "session_id": session_id,  # ensure present on upsert
-                "mentioned_entities": session["mentioned_entities"],
-                "updated_at": session["updated_at"]
-            }},
-            upsert=True
+            {"$set": session},
+            upsert=True  # Creates the document if it doesn't exist
         )
         self.debug(f"Updated entity memory for {session_id}: {session['mentioned_entities']}")
 
@@ -958,18 +969,20 @@ class AIAnalyst:
 
     # In backend/utils/ai_core/analyst.py
 
-    def get_student_grades(self, student_name: str = None, program: str = None, year_level: int = None) -> List[dict]:
+    # --- REPLACE THE ENTIRE get_student_grades METHOD WITH THIS ---
+
+    def get_student_grades(self, student_name: str = None, program: str = None, year_level: int = None, section: str = None) -> List[dict]:
         """
-        Tool: Finds grade documents for a specific student by name, or for a group of students
-        by program and/or year level. Can also retrieve all grades if no filters are provided.
+        Tool (UPGRADED): Finds grade documents for a specific student by name, or for a group of students
+        by program, year level, and/or section. Can also retrieve all grades if no filters are provided.
         """
-        self.debug(f"Running grade tool for name='{student_name}', program='{program}', year='{year_level}'")
+        self.debug(f"Running grade tool for name='{student_name}', program='{program}', year='{year_level}', section='{section}'")
         
         # Normalize year_level=0 to None for broader matching
         if year_level == 0:
             year_level = None
 
-        # Priority 1: Search by a specific student's name
+        # Priority 1: Search by a specific student's name (no change here)
         if student_name:
             self.debug(f"-> Prioritizing search by name: {student_name}")
             entity = self.resolve_person_entity(name=student_name)
@@ -982,50 +995,55 @@ class AIAnalyst:
             if not student_ids:
                 return student_docs + [{"status": "empty", "summary": f"Found student(s) named '{student_name}' but they are missing student IDs needed to find grades."}]
             
-            # Find all grades for all found student IDs in a single query
-            grade_docs = self.search_database(filters={"student_id": {"$in": student_ids}}, collection_filter=self.grades_collections) # <-- FIX
+            grade_docs = self.search_database(filters={"student_id": {"$in": student_ids}}, collection_filter=self.grades_collections)
             if not grade_docs:
                 return student_docs + [{"status": "empty", "summary": f"Found student(s) named '{student_name}' but could not find any grade information for them."}]
             
             return student_docs + grade_docs
 
-        # Priority 2: Search by a group (program and/or year)
-        if program or year_level:
-            self.debug(f"-> Searching for group: program={program}, year_level={year_level}")
+        # --- THIS IS THE MODIFIED BLOCK ---
+        # Priority 2: Search by a group (program, year, and/or section)
+        if program or year_level or section:
+            self.debug(f"-> Searching for group: program={program}, year_level={year_level}, section={section}")
             student_filters = {}
             if program:
                 student_filters['program'] = program
             if year_level:
                 student_filters['year_level'] = year_level
+            if section:
+                student_filters['section'] = section  # <-- THIS IS THE NEW LINE
 
-            student_docs = self.find_people(**student_filters)
+            # find_people already accepts 'section', so we can pass the filters directly
+            student_docs = self.find_people(**student_filters) 
             if not student_docs or "status" in (student_docs[0] or {}).get("metadata", {}):
                 return [{"status": "empty", "summary": f"I couldn't find any students matching those criteria."}]
-                
+            
             student_ids = [doc.get("metadata", {}).get("student_id") for doc in student_docs if doc.get("metadata", {}).get("student_id")]
             if not student_ids:
                 return [{"status": "empty", "summary": "Found students, but they are missing IDs needed to find grades."}]
 
             grade_filters = {"student_id": {"$in": student_ids}}
-            grade_docs = self.search_database(filters=grade_filters, collection_filter=self.grades_collections) # <-- FIX
+            grade_docs = self.search_database(filters=grade_filters, collection_filter=self.grades_collections)
             
             if not grade_docs:
                 return student_docs + [{"status": "empty", "summary": "Could not find any grade information for the specified students."}]
 
             return student_docs + grade_docs
+        # --- END OF MODIFIED BLOCK ---
         
-        # Priority 3: No filters provided, retrieve all grade documents
-        if not student_name and not program and not year_level:
+        # Priority 3: No filters provided (no change here)
+        if not student_name and not program and not year_level and not section:
             self.debug("-> No filters provided. Retrieving all grade documents.")
-            all_grade_docs = self.search_database(collection_filter=self.grades_collections) # <-- FIX
+            all_grade_docs = self.search_database(collection_filter=self.grades_collections)
             if not all_grade_docs:
                 return [{"status": "empty", "summary": "I could not find any grade documents in the database."}]
             return all_grade_docs
 
-        return [{"status": "error", "summary": "To get grades, please provide a specific student's name, a program, or a year level."}]
-    
+        return [{"status": "error", "summary": "To get grades, please provide a specific student's name, a program, a year level, or a section."}]
 
-    # In backend/utils/ai_core/analyst.py
+# --- END OF REPLACEMENT ---
+
+    
 
     def answer_question_about_person(self, person_name: str, question: str) -> List[dict]:
         """
@@ -1189,119 +1207,179 @@ class AIAnalyst:
     
 # --- REPLACE YOUR OLD get_person_schedule WITH THIS ---
 
+# --- REPLACE YOUR CURRENT get_person_schedule METHOD WITH THIS ---
+
+# --- REPLACE YOUR CURRENT get_person_schedule METHOD WITH THIS V5 ---
+
+# --- REPLACE YOUR CURRENT get_person_schedule METHOD WITH THIS (V6) ---
+
     def get_person_schedule(self, person_name: str = None, program: str = None, year_level: int = None, section: str = None) -> List[dict]:
         """
-        Tool (Unified & DYNAMIC V2): Retrieves schedules for a specific person (student, faculty, or staff)
-        or for a student group, using dynamic collection lists.
+        Tool (Unified & DYNAMIC V6 - Ambiguity Aware): Relies on the V5
+        entity resolver and adds ambiguity detection.
+        
+        If it finds schedules for multiple different people, it will
+        withhold the schedules and return a clarification signal.
         """
-        self.debug(f"Running DYNAMIC schedule tool for person='{person_name}', program={program}, year={year_level}, section={section}")
+        self.debug(f"Running DYNAMIC V6 (Ambiguity Aware) schedule tool for person='{person_name}', program={program}, year={year_level}, section={section}")
 
-        # --- Student Group Schedule Logic ---
-        if year_level:
-            try:
-                year_str = str(year_level)
-                match = re.search(r'\d+', year_str)
-                if match: year_level = int(match.group(0))
-                else: year_level = None 
-            except (ValueError, TypeError): year_level = None
-
-        if program or year_level or section:
+        # --- Case 1: Student Group Schedule Logic (No Change) ---
+        if not person_name and (program or year_level or section):
             filters = {}
             if program: filters["program"] = program
             if year_level: filters["year_level"] = year_level
             if section: filters["section"] = section
 
             self.debug(f"-> Running group schedule search with filters={filters}")
-            # Use the dynamic list of student schedule collections
             schedule_docs = self.search_database(filters=filters, collection_filter=self.student_schedule_collections)
             if not schedule_docs:
                 return [{"status": "empty", "summary": "No student schedules found for the specified group."}]
             return schedule_docs
         # --- End Student Group Logic ---
 
-        # --- Case 2: Specific Person's Schedule (Students, Faculty, AND Staff) ---
+        # --- Case 2: Specific Person's Schedule ---
         if person_name:
-            self.debug(f"-> Resolving entity for person: {person_name}")
-            entity = self.resolve_person_entity(name=person_name) # This tool searches all people collections
+            self.debug(f"-> Calling V5 entity resolver for: {person_name}")
+            
+            # 1. Call the V5 resolver
+            entity = self.resolve_person_entity(name=person_name)
             
             if not entity or not entity.get("primary_document"):
                 return [{"status": "error", "summary": f"Could not find anyone matching '{person_name}'."}]
             
-            document_list = entity["primary_document"]
-            all_found_docs = [] 
-            aliases = entity.get("aliases", [])
-            primary_name_for_log = entity["primary_name"]
+            all_found_docs = entity["primary_document"]
             
-            if primary_name_for_log not in aliases:
-                aliases = [primary_name_for_log] + aliases
+            # 2. Filter into profiles and schedules
+            schedule_docs = []
+            profile_docs = []
+            
+            all_schedule_collections = (
+                self.student_schedule_collection_list +
+                self.faculty_schedule_collection_list +
+                self.staff_schedule_collection_list
+            )
 
-            for person_record in document_list:
-                all_found_docs.append(person_record)
-                meta = person_record.get("metadata", {})
-                source_collection = person_record.get("source_collection", "")
-                current_person_name = meta.get("full_name", "N/A")
-                self.debug(f"-> Processing schedule search for '{current_person_name}' from '{source_collection}'...")
-                
-                schedule_docs = []
-                
-                # --- THIS IS THE FIX ---
-                
-                # LOGIC 1: If it's a student
-                if any(s == source_collection for s in self.student_collection_list):
-                    schedule_filters = {
-                        "program": meta.get("program") or meta.get("course"),
-                        "year_level": meta.get("year_level") or meta.get("year"),
-                        "section": meta.get("section")
-                    }
-                    if all(schedule_filters.values()):
-                        # Use the DYNAMIC student schedule list
-                        schedule_docs = self.search_database(filters=schedule_filters, collection_filter=self.student_schedule_collections)
-                    else:
-                        all_found_docs.append({"source_collection": "system_note", "content": f"Student record for '{current_person_name}' is missing key details (program/year/section) to find a schedule.", "metadata": {"status": "error"}})
-                        continue
-                
-                # LOGIC 2: If it's a faculty
-                elif "faculty_ccs" == source_collection: # This is a specific teaching faculty
-                    schedule_filters = {"$or": [{"full_name": {"$in": aliases}}, {"adviser_name": {"$in": aliases}}]}
-                    # Use the DYNAMIC faculty schedule list
-                    schedule_docs = self.search_database(filters=schedule_filters, collection_filter=self.faculty_schedule_collections)
-
-                # LOGIC 3: If it's any other staff
-                elif any(s == source_collection for s in self.staff_collection_list):
-                    schedule_filters = {"$or": [{"full_name": {"$in": aliases}}, {"staff_name": {"$in": aliases}}]}
-                    # Use the DYNAMIC staff schedule list
-                    schedule_docs = self.search_database(filters=schedule_filters, collection_filter=self.staff_schedule_collections)
-                
-                # --- END OF FIX ---
-                
+            for doc in all_found_docs:
+                source_coll = doc.get("source_collection", "")
+                if any(s == source_coll for s in all_schedule_collections):
+                    schedule_docs.append(doc)
                 else:
-                    all_found_docs.append({"source_collection": "system_note", "content": f"Could not determine schedule type for '{current_person_name}'.", "metadata": {"status": "error"}})
-                    continue
+                    profile_docs.append(doc)
 
-                if not schedule_docs:
-                    all_found_docs.append({"source_collection": "system_note", "content": f"Found person '{current_person_name}' but could not find a matching schedule.", "metadata": {"status": "empty"}})
-                else:
-                    all_found_docs.extend(schedule_docs)
+            # --- 3. THIS IS THE NEW AMBIGUITY CHECK ---
+            # Count how many unique people we found profiles for
+            unique_profile_ids = set()
+            for doc in profile_docs:
+                meta = doc.get("metadata", {})
+                # Use faculty_id, student_id, or full_name as a fallback unique key
+                pid = meta.get("faculty_id", meta.get("student_id", meta.get("full_name")))
+                if pid:
+                    unique_profile_ids.add(pid)
+            
+            # AMBIGUITY HIT: We found schedules, but they belong to more than one person.
+            if len(unique_profile_ids) > 1 and len(schedule_docs) > 0:
+                self.debug(f"-> Ambiguity detected: Found schedules for {len(unique_profile_ids)} different people. Asking for clarification.")
+                # Send ONLY the profiles and the signal. Do NOT send the schedules.
+                return profile_docs + [{
+                    "source_collection": "system_signal",
+                    "content": "Ambiguity detected",
+                    "metadata": {"status": "clarification_needed"}
+                }]
+            # --- END OF NEW CHECK ---
 
-            return all_found_docs
+            # 4. Check if we found any schedules (Original logic)
+            if not schedule_docs:
+                return profile_docs + [{"source_collection": "system_note", "content": f"Found person '{person_name}' but could not find a matching schedule.", "metadata": {"status": "empty"}}]
+            
+            # 5. Success: We found one person (or 0 profiles) and their schedule(s)
+            return profile_docs + schedule_docs
 
         return [{"status": "error", "summary": "Please provide a person's name or a student group filter (program, year, section)."}]
 
-    def get_adviser_info(self, program: str, year_level: int) -> List[dict]:
+# --- END OF REPLACEMENT ---
+
+
+
+
+    def get_adviser_info(self, person_name: str = None, program: str = None, year_level: int = None, section: str = None) -> List[dict]:
         """
-        Tool: Finds the adviser for a student group and retrieves their faculty profile.
+        Tool (UPGRADED): Finds the adviser for a specific student (by name) or a
+        student group (by filters), and retrieves the adviser's faculty profile.
         """
-        self.debug(f"Running tool: get_adviser_info for {program} Year {year_level}")
+        self.debug(f"Running UPGRADED adviser tool for person='{person_name}', program={program}, year={year_level}, section={section}")
+
+        schedule_docs = []
+        all_found_docs = [] # To store student profiles, etc.
+        schedule_filters = {}
+
+        # --- Case 1: Search by a specific student's name ---
+        if person_name:
+            self.debug(f"-> Prioritizing search by name: {person_name}")
+            entity = self.resolve_person_entity(name=person_name)
+            
+            if not entity or not entity.get("primary_document"):
+                return [{"status": "error", "summary": f"Could not find a student named '{person_name}'."}]
+            
+            # Get the top match. We only support finding the adviser for one person at a time.
+            student_doc = entity["primary_document"][0] 
+            all_found_docs.append(student_doc) # Add student profile to results
+            
+            meta = student_doc.get("metadata", {})
+            source_collection = student_doc.get("source_collection", "")
+
+            # Check if this person is a student
+            if any(s == source_collection for s in self.student_collection_list):
+                schedule_filters = {
+                    "program": meta.get("program") or meta.get("course"),
+                    "year_level": meta.get("year_level") or meta.get("year"),
+                    "section": meta.get("section")
+                }
+                if not all(schedule_filters.values()):
+                    return all_found_docs + [{"status": "empty", "summary": f"Student record for '{person_name}' is missing key details (program/year/section) to find their adviser's schedule."}]
+            else:
+                return all_found_docs + [{"status": "error", "summary": f"The person '{person_name}' was found, but they are not a student and do not have an adviser."}]
         
-        schedule_docs = self.search_database(filters={"program": program, "year_level": year_level}, collection_filter="schedules")
-        if not schedule_docs or "adviser" not in schedule_docs[0].get("metadata", {}):
-            return [{"status": "empty", "summary": f"Could not find a schedule or adviser for {program} Year {year_level}."}]
+        # --- Case 2: Search by group filters (or filters from Case 1) ---
+        elif program and year_level:
+            self.debug(f"-> Searching for group: program={program}, year_level={year_level}, section={section}")
+            schedule_filters["program"] = program
+            schedule_filters["year_level"] = year_level
+            if section:
+                schedule_filters["section"] = section
         
-        adviser_name = schedule_docs[0]["metadata"]["adviser"]
+        else:
+            return [{"status": "error", "summary": "To find an adviser, please provide a student's name or a program and year level."}]
+
+        # --- Shared Logic: Get schedule using the determined filters ---
+        self.debug(f"-> Searching for schedule with filters: {schedule_filters}")
+        schedule_docs = self.search_database(
+            filters=schedule_filters,
+            collection_filter=self.student_schedule_collections
+        )
+
+        if not schedule_docs:
+            summary = "Could not find a matching schedule to determine the adviser."
+            return all_found_docs + [{"status": "empty", "summary": summary}]
+        
+        # --- Shared Logic: Get adviser from schedule and find their profile ---
+        # We only need to look at the first matching schedule
+        first_schedule_doc = schedule_docs[0]
+        adviser_name = first_schedule_doc.get("metadata", {}).get("adviser")
+
+        if not adviser_name:
+            return all_found_docs + schedule_docs + [{"status": "empty", "summary": f"Found a schedule but it is missing an adviser's name."}]
+        
+        self.debug(f"-> Found adviser '{adviser_name}'. Resolving their profile.")
         adviser_entity = self.resolve_person_entity(name=adviser_name)
         faculty_docs = adviser_entity.get("primary_document", [])
         
-        return schedule_docs + faculty_docs
+        if not faculty_docs:
+             return all_found_docs + schedule_docs + [{"status": "empty", "summary": f"Found adviser '{adviser_name}' on the schedule but could not find their faculty profile."}]
+
+        # Return all collected documents
+        return all_found_docs + schedule_docs + faculty_docs
+
+# --- END OF REPLACEMENT ---
 
     def find_faculty_by_class_count(self, find_most: bool = True) -> List[dict]:
         """
@@ -1455,96 +1533,246 @@ class AIAnalyst:
         else:
             return name2_parts.issubset(name1_parts)
 
-    def resolve_person_entity(self, name: str) -> dict:
+            # --- REPLACE THE ENTIRE resolve_person_entity METHOD WITH THIS ---
+
+            # --- REPLACE THE ENTIRE resolve_person_entity METHOD WITH THIS (V5.1) ---
+
+            # --- REPLACE THE ENTIRE resolve_person_entity METHOD WITH THIS (V5.2 - Corrected) ---
+
+    def resolve_person_entity(self, name: str, **kwargs) -> dict:
         """
-        Tool: Finds all documents and name variations (aliases) for a person using a
-        multi-pronged search strategy (semantic + substring) and fuzzy matching.
-        This is a core component for accurately finding people.
-        """
-        self.debug(f"Resolving entity for: '{name}'")
+        Tool (UPGRADED V5.3 - Filter-Aware):
+        Finds all documents and name variations for a person.
         
-        # Clean the input name to create search terms
-        original_query = name.lower()
-        aggressive_clean_pattern = r'\b(PROFESSOR|DR|DOCTOR|MR|MS|MRS|JR|SR|I|II|III|IV)\b\.?|[^\w\s]'
+        This version now accepts **kwargs to receive active_filters
+        (like program, department) to resolve ambiguity.
+        """
+        self.debug(f"Resolving entity (V5.3) for: '{name}' with filters: {kwargs}")
+        
+        # --- THIS IS THE NEW FILTER-HANDLING BLOCK ---
+        # 1. Separate name filters from other filters
+        active_filters = {}
+        name_parts_from_filters = []
+        for key, value in kwargs.items():
+            if key in ["name", "person_name", "student_name"]:
+                name_parts_from_filters.append(str(value))
+            elif value: # Add any other filter (program, department, etc.)
+                active_filters[key] = value
+        
+        # 2. Clean the main 'name' parameter
+        aggressive_clean_pattern = r'\b(PROF|PROFESSOR|DR|DOCTOR|MR|MS|MRS)\b\.?|[^\w\s]'
         cleaned_name = re.sub(aggressive_clean_pattern, '', name, flags=re.IGNORECASE)
         cleaned_query = ' '.join(cleaned_name.split()).lower()
         
-        search_terms = list(set([term for term in [original_query, cleaned_query] if term]))
-        self.debug(f"   -> Performing multi-pronged search for: {search_terms}")
-
-        # 1. Perform both semantic and substring searches
-        all_results = []
-        for term in search_terms:
-            all_results.extend(self.search_database(query=term))
-            all_results.extend(self.search_database(document_filter={"$contains": term}))
-
-        # 2. De-duplicate results
-        initial_results = list({doc['content']: doc for doc in all_results}.values())
+        # 3. Combine all name parts
+        all_name_parts = set(part for part in cleaned_query.split() if len(part) > 2)
+        for name_part in name_parts_from_filters:
+             all_name_parts.add(name_part.lower())
         
-        if not initial_results:
+        search_words = all_name_parts
+        if not search_words:
             return {}
+            
+        self.debug(f"   -> Performing multi-pass search for all words: {search_words}")
 
-        # 3. Gather all potential name aliases from the found documents
-        potential_names, primary_name = {name.title()}, name.title()
-        for result in initial_results:
-            meta = result.get('metadata', {})
-            fields = ['full_name', 'adviser', 'staff_name', 'student_name']
-            for field in fields:
-                if meta.get(field): potential_names.add(str(meta[field]).strip().title())
+        # --- Pass 1: Find all matching PROFILES ---
+        profile_collections = self.all_people_collections
+        profile_docs = []
         
-            # 4. Use the fuzzy matcher to build a complete and accurate alias list.
-        resolved_aliases = set()
-        for p_name in potential_names:
-            # Always match against the original query 'name' to avoid errors.
-            if self._fuzzy_name_match(name, p_name):
-                resolved_aliases.add(p_name)
-
-        # --- PATCH START: INTELLIGENT NAME MATCHING ---
-        # 5. Filter the initial results to keep only definitive matches
-        matching_docs = []
-        query_parts = set(cleaned_query.split()) 
+        # Build a regex for each individual word
+        search_regex_list = [re.compile(re.escape(word), re.IGNORECASE) for word in search_words]
         
-        for doc in initial_results:
-            meta = doc.get("metadata", {})
-            full_name_in_doc = meta.get("full_name", "").lower()
-
-            # Create a set of all individual name words from the document for robust matching.
-            # This handles formats like "Carpenter, Michael" and "Jared Escobar" equally well.
-            doc_name_parts = set(full_name_in_doc.replace(",", "").split())
-
-            # If all parts of the user's search query are found within the document's name parts, consider it a match.
-            # This will correctly match a search for "escobar" to the document for "Jared Escobar".
-            if query_parts.issubset(doc_name_parts):
-                matching_docs.append(doc)
+        # --- THIS IS THE FIX ---
+        # Build a filter that requires ALL words to be present
+        # across several key fields.
         
-        # Determine the best primary name from the actual matches
-        final_primary_name = primary_name
-        if matching_docs:
-            final_primary_name = max([doc.get("metadata", {}).get("full_name", "") for doc in matching_docs], key=len)
-            self.current_query_entities.append(final_primary_name) # <-- ADD THIS LINE
+        # We assume one word is the name, the others are descriptors.
+        # This is complex. Let's simplify.
+        # We will search for ANY document that contains ALL these words
+        # in its full_name OR position OR department.
+        
+        # --- THIS IS THE MODIFIED FILTER LOGIC ---
+        # Start with the active_filters (e.g., {"program": "bscs"})
+        profile_filters = dict(active_filters)
+        
+        # Now, add the name filters. We need to match ALL name words.
+        name_and_conditions = []
+        for regex in search_regex_list:
+            name_and_conditions.append({
+                "$or": [
+                    {"full_name": {"$regex": regex}},
+                    {"position": {"$regex": regex}}, # Keep this broad
+                    {"department": {"$regex": regex}} # Keep this broad
+                ]
+            })
+        
+        # Add the name conditions to the main filter
+        profile_filters["$and"] = name_and_conditions
+        # --- END OF MODIFIED FILTER LOGIC ---
+        # --- END OF FIX ---
+        
+        profile_docs.extend(self.search_database(
+            filters=profile_filters,
+            collection_filter=profile_collections
+        ))
+        
+        # De-duplicate profiles
+        unique_profiles = list({doc.get("metadata", {}).get("student_id", doc.get("metadata", {}).get("faculty_id", doc.get("content"))): doc for doc in profile_docs}.values())
+        self.debug(f"   -> Pass 1: Found {len(unique_profiles)} unique profile(s).")
+        
+        if not unique_profiles:
+            # Fallback... (the rest of the fallback logic is fine)
+            self.debug(f"   -> No profiles found. Fallback to searching all schedule collections.")
+            all_schedule_collections = ",".join(self.student_schedule_collection_list + self.faculty_schedule_collection_list + self.staff_schedule_collection_list)
+            
+            schedule_filters = {"$or": [
+                {"full_name": {"$in": search_regex_list}},
+                {"adviser_name": {"$in": search_regex_list}},
+                {"staff_name": {"$in": search_regex_list}}
+            ]}
+            
+            schedule_docs = self.search_database(
+                filters=schedule_filters,
+                collection_filter=all_schedule_collections
+            )
+            
+            if not schedule_docs:
+                self.debug(f"   -> No profiles or schedules found.")
+                return {}
+            
+            unique_schedules = list({doc.get("metadata", {}).get("schedule_id"): doc for doc in schedule_docs}.values())
+            primary_name = unique_schedules[0].get("metadata", {}).get("full_name", name)
+            self.current_query_entities.append(primary_name)
+            
+            return {
+                "primary_name": primary_name,
+                "aliases": list(set([meta.get("full_name", "") for doc in unique_schedules for meta in [doc.get("metadata", {})]])),
+                "primary_document": unique_schedules
+            }
 
-        self.debug(f"Entity resolved: Primary='{final_primary_name}', Aliases={list(resolved_aliases)}, Found {len(matching_docs)} docs.")
+        # --- Pass 2: Find all related SCHEDULES for each profile (if profiles were found) ---
+        # ... (The rest of the function is 100% correct as written in V5.1) ...
+        all_related_schedules = []
+        all_aliases = set(search_words)
+        
+        student_schedule_collections = ",".join(self.student_schedule_collection_list)
+        staff_schedule_collections = ",".join(self.faculty_schedule_collection_list + self.staff_schedule_collection_list)
+
+        for profile in unique_profiles:
+            meta = profile.get("metadata", {})
+            source_coll = profile.get("source_collection", "")
+            
+            if meta.get("full_name"):
+                all_aliases.add(meta.get("full_name"))
+
+            if any(s == source_coll for s in self.student_collection_list):
+                student_filters = {
+                    "program": meta.get("program") or meta.get("course"),
+                    "year_level": meta.get("year_level") or meta.get("year"),
+                    "section": meta.get("section")
+                }
+                if all(student_filters.values()):
+                    all_related_schedules.extend(self.search_database(
+                        filters=student_filters,
+                        collection_filter=student_schedule_collections
+                    ))
+            
+            elif any(s == source_coll for s in self.staff_collection_list):
+                name_parts = set()
+                if meta.get("full_name"):
+                    cleaned = re.sub(aggressive_clean_pattern, '', meta.get("full_name"), flags=re.IGNORECASE)
+                    name_parts.update(part for part in cleaned.split() if len(part) > 2)
+                
+                if name_parts:
+                    regex_list = [re.compile(re.escape(part), re.IGNORECASE) for part in name_parts]
+                    schedule_filters = {"$or": [
+                        {"full_name": {"$in": regex_list}},
+                        {"adviser_name": {"$in": regex_list}},
+                        {"staff_name": {"$in": regex_list}}
+                    ]}
+                    all_related_schedules.extend(self.search_database(
+                        filters=schedule_filters,
+                        collection_filter=staff_schedule_collections
+                    ))
+
+        for sched in all_related_schedules:
+            meta = sched.get("metadata", {})
+            for key in ["full_name", "adviser_name", "staff_name"]:
+                if meta.get(key):
+                    all_aliases.add(meta.get(key))
+
+        all_docs = unique_profiles + all_related_schedules
+        final_unique_docs = list({doc.get("metadata", {}).get("schedule_id", doc.get("metadata", {}).get("student_id", doc.get("metadata", {}).get("faculty_id"))): doc for doc in all_docs}.values())
+
+        primary_name = name
+        if unique_profiles:
+            primary_name = unique_profiles[0].get("metadata", {}).get("full_name", name)
+            self.current_query_entities.append(primary_name)
+
+        self.debug(f"   -> Entity resolved: Primary='{primary_name}', Aliases={all_aliases}, Found {len(final_unique_docs)} total docs.")
         
         return {
-            "primary_name": final_primary_name,
-            "aliases": list(resolved_aliases),
-            "primary_document": matching_docs 
+            "primary_name": primary_name,
+            "aliases": list(all_aliases),
+            "primary_document": final_unique_docs
         }
+
+
+    # --- REPLACE THE CURRENT get_person_profile METHOD WITH THIS ---
 
     def get_person_profile(self, person_name: str) -> List[dict]:
         """
-        Tool: Retrieves only the main profile document for a specific person.
-        Used for general 'who is...' queries.
+        Tool (UPGRADED V2 - Ambiguity Aware): Retrieves the main profile
+        document for a specific person.
+        
+        If it finds profiles for multiple different people, it will
+        withhold them and return a clarification signal.
         """
-        self.debug(f"Running FOCUSED tool: get_person_profile for '{person_name}'")
+        self.debug(f"Running FOCUSED (V2 Ambiguity Aware) tool: get_person_profile for '{person_name}'")
         
         entity = self.resolve_person_entity(name=person_name)
         
-        if entity and entity.get("primary_document"):
-            return entity["primary_document"]
+        if not entity or not entity.get("primary_document"):
+            return [{"status": "empty", "summary": f"I could not find a profile for anyone named '{person_name}'."}]
+
+        all_found_docs = entity["primary_document"]
+
+        # --- THIS IS THE NEW AMBIGUITY CHECK (from V6 schedule tool) ---
+        profile_docs = []
         
-        return [{"status": "empty", "summary": f"I could not find a profile for anyone named '{person_name}'."}]
-    
+        # Define all profile collections
+        all_profile_collections = (
+            self.student_collection_list +
+            self.staff_collection_list
+        )
+        
+        for doc in all_found_docs:
+            source_coll = doc.get("source_collection", "")
+            if any(s == source_coll for s in all_profile_collections):
+                profile_docs.append(doc)
+
+        # Count how many unique people we found profiles for
+        unique_profile_ids = set()
+        for doc in profile_docs:
+            meta = doc.get("metadata", {})
+            pid = meta.get("faculty_id", meta.get("student_id", meta.get("full_name")))
+            if pid:
+                unique_profile_ids.add(pid)
+        
+        # AMBIGUITY HIT: We found more than one person.
+        if len(unique_profile_ids) > 1:
+            self.debug(f"-> Ambiguity detected: Found {len(unique_profile_ids)} different people. Asking for clarification.")
+            # Send ONLY the profiles and the signal.
+            return profile_docs + [{
+                "source_collection": "system_signal",
+                "content": "Ambiguity detected",
+                "metadata": {"status": "clarification_needed"}
+            }]
+        # --- END OF NEW CHECK ---
+
+        # Success: We found one person (or 0 profiles).
+        # Return all documents found (profiles + any related schedules).
+        return all_found_docs
 
 
 
@@ -2538,7 +2766,10 @@ class AIAnalyst:
                     else: # Generic logic for all other filters
                         query_value = v
                         if isinstance(v, str):
-                            query_value = {"$in": list(set([v.lower(), v.upper(), v.title()]))}
+                            # --- THIS IS THE FIX ---
+                            # Use a case-insensitive regex instead of a fragile $in list
+                            query_value = {"$regex": f"^{re.escape(v)}$", "$options": "i"}
+                            # --- END OF FIX ---
 
                         if len(possible_keys) > 1:
                             or_list = [{key: query_value} for key in possible_keys]
@@ -2748,35 +2979,113 @@ class AIAnalyst:
         plan_hash = None
         # --- END OF ADDITION ---
 
+        self.current_query_entities = []
         context = session.get("structured_context", {})
+        
+        # --- NEW CLARIFICATION LOGIC V3 ---
+        # --- [NEW "MINI-PLANNER" CLARIFICATION LOGIC] ---
+            
         if context.get("clarification_pending"):
             self.debug("Clarification is pending. Processing user's answer...")
             
-            # Heuristic to check if the user changed the topic
-            new_topic_keywords = ["who is", "what is", "show me", "list", "find"]
+            # Check if the user is starting a totally new topic
+            new_topic_keywords = ["who is", "what is", "what are", "show me", "list", "find", "get", "compare", "how many", "verify"]
             is_new_topic = any(query.lower().startswith(keyword) for keyword in new_topic_keywords)
 
-            # If it's NOT a new topic, combine the query and re-run.
             if not is_new_topic:
-                self.debug("Combining original query with user's clarification.")
-                original_query = context.get("original_ambiguous_query", "")
-                combined_query = f"{original_query} {query}"
+                self.debug("This is an answer to our question. Using 'mini-planner' to combine context.")
                 
-                # IMPORTANT: Fully reset the state before re-running.
+                # 1. Get the original ambiguous query from session
+                original_query = context.get("original_ambiguous_query", "The user's previous query.")
+                
+                # 2. Get the active filters from the session
+                active_filters = context.get("active_filters", {})
+                
+                # 3. Combine the query, the answer, AND the active filters
+                combined_query = (
+                    f"The user's previous query was: '{original_query}'. "
+                    f"That query was ambiguous, so I asked for more detail. "
+                    f"The user has now provided the clarifying detail, which is: '{query}'. "
+                    f"CRITICAL: You MUST apply these existing filters to this new detail: {json.dumps(active_filters)}"
+                )
+                
+                self.debug(f"Combined query for planner: {combined_query}")
+                
+                # 4. Overwrite the 'query' variable with this new combined prompt
+                query = combined_query
+                
+                # 5. Reset the clarification state
                 context["clarification_pending"] = False
                 context["original_ambiguous_query"] = ""
                 
-                return self.execute_reasoning_plan(combined_query, session)
+            else:
+                # --- THIS IS THE NEW FIX ---
+                self.debug("User changed the topic. Resetting state and handling new query.")
+                context["clarification_pending"] = False
+                context["original_ambiguous_query"] = ""
+                # We simply let the 'query' variable (e.g., "nevermind who is erin ruiz")
+                # pass through to the planner *without* any old context.
+                # --- END OF FIX ---
+        
+            # --- END OF NEW LOGIC ---
+        
+        # --- THIS IS THE PROMPT GENERATION LOGIC FROM THE `else` BLOCK ---
+        # --- IT MUST BE MOVED *OUTSIDE* THE ELSE BLOCK ---
+        
+        coref_params = self._coref_to_params(query, session)
+        if coref_params:
+            self.debug(f"Injecting coreference params into query: {coref_params}")
+            query = f"{query}\n\n[System Hint: The pronoun in the query (he/she/his/her) refers to: {coref_params.get('person_name')}]"
 
-            # If it IS a new topic, just reset the state and proceed normally.
-            self.debug("User changed the topic. Resetting state and processing new query.")
-            context["clarification_pending"] = False
-            context["original_ambiguous_query"] = ""
-            # The function will now proceed below with a clean state.
-        # --- END: CLARIFICATION STATE MACHINE (RESOLUTION LOGIC) ---
+        filters_cleared_on_retry = False
+        
+        # --- THIS BLOCK IS NOW THE *FIRST* CHECK ---
+        # --- Check for AMBIGUITY on the *first* pass ---
+        # --- Check for AMBIGUITY on the *first* pass (Context-Aware) ---
+        # --- [NEW "SpaCy-Aware" Ambiguity Check (v6 - FINAL)] ---
+        is_ambiguous = False
+        if not context.get("clarification_pending"): # Only run if we aren't already handling a clarification
+            stripped_query = query.strip().lower()
+            
+            # 1. Is the query grammatically vague? (Light check)
+            is_grammatically_vague = False
+            query_words = stripped_query.split()
+            conversational_starters = {'hello', 'hi', 'hey', 'thanks', 'thank you', 'ok', 'okay', 'bye', 'goodbye'}
+            
+            if len(query_words) <= 3 and stripped_query not in conversational_starters:
+                 if stripped_query and query_words[-1] in ['of', 'for', 'in', 'at', 'from', 'with', 'about', 'to']:
+                    self.debug(f"Query flagged as incomplete. Reason: Ends with a preposition '{query_words[-1]}'.")
+                    is_grammatically_vague = True
+                 elif len(query_words) <= 2:
+                     self.debug(f"Query flagged as incomplete. Reason: Short, non-command query.")
+                     is_grammatically_vague = True
 
+            # 2. If not vague by length, check with heavy NLP
+            if not is_grammatically_vague and self.policy_engine.is_query_vague_nlp(stripped_query):
+                is_grammatically_vague = True
 
-        self.current_query_entities = []
+            # 3. If it IS vague, decide if it's an answer or a new question using SpaCy
+            if is_grammatically_vague:
+                self.debug(f"Query '{stripped_query}' is grammatically vague. Analyzing with SpaCy...")
+                
+                # Check 1: Is it a new question? (e.g., "what is the schedule?")
+                if self.policy_engine.is_interrogative(stripped_query):
+                    self.debug("-> NLP: Query is a vague question. Flagging as AMBIGUOUS.")
+                    is_ambiguous = True
+                
+                # Check 2: Is it "data-like"? (e.g., "bscs 2nd year", "4th year")
+                elif self.policy_engine.is_data_like(stripped_query):
+                    self.debug("-> NLP: Query is vague, but contains data-like tokens. Assuming it's an ANSWER. Bypassing ambiguity check.")
+                    is_ambiguous = False # Treat it as a follow-up
+                
+                else:
+                    # It's vague, not a question, and not data-like (e.g., "asdf lkjh").
+                    self.debug("-> NLP: Query is vague, not a question, and not data-like. Flagging as AMBIGUOUS.")
+                    is_ambiguous = True
+        # --- [END OF NEW "SpaCy-Aware" BLOCK] ---
+            
+            # --- END OF NEW LOGIC ---
+
 
 
        
@@ -2822,23 +3131,15 @@ class AIAnalyst:
                 self.debug(f"Planner Attempt {attempt + 1}/{max_retries}...")
                 
                 # --- START: Prompt Generation (Now INSIDE the loop) ---
-                # --- START: Prompt Generation (Now INSIDE the loop) ---
-                is_ambiguous = False
-                if not filters_cleared_on_retry: # Only check ambiguity on the first pass
-                    stripped_query = query.strip().lower()
-                    query_words = stripped_query.split()
-                    conversational_starters = {'hello', 'hi', 'hey', 'thanks', 'thank you', 'ok', 'okay', 'bye', 'goodbye'}
-                    dangling_words = ['of', 'for', 'in', 'at', 'from', 'with', 'about', 'to']
-                    if len(query_words) <= 2 and stripped_query not in conversational_starters:
-                        is_ambiguous = True
-                    if stripped_query and query_words[-1] in dangling_words:
-                        is_ambiguous = True
+                # --- START: Prompt Generation (Now INSIDE the loop) --
                 
                 if is_ambiguous:
                     self.debug("-> Ambiguity detected. Using 'Grounded Ambiguity Resolver Prompt'.")
                     sys_prompt = PROMPT_TEMPLATES["ambiguity_resolver_prompt"].format(db_schema_summary=self.db_schema_summary)
                     planner_user_prompt = query
                 
+
+
                 # --- NEW 422-AWARE PROMPT LOGIC ---
                 elif filters_cleared_on_retry:
                     # This is a 422-RECOVERY ATTEMPT.
@@ -2895,12 +3196,24 @@ class AIAnalyst:
                     
                     structured_context_str = json.dumps(planner_context, indent=2)
                     self.debug(f"Sending pruned context to Planner: {structured_context_str}")
+
+                    # --- THIS IS THE FIX ---
+                    # 3. Set the system prompt.
+                    #    We will create a "prompt-safe" list of positions
+                    #    that includes our main generic words.
+                    
+                    # Make a copy of the real positions list
+                    prompt_safe_positions = list(self.all_positions) 
+                    
+                    # Add the generic words the AI gets stuck on.
+                    # We add them with a capital letter to match the others.
+                    prompt_safe_positions.extend(["Faculty", "Staff", "Admin"])
                     
                     # 3. Set the system prompt.
                     sys_prompt = PROMPT_TEMPLATES["planner_agent"].format(
                         all_programs_list=self.all_programs,
                         all_departments_list=self.all_departments,
-                        all_positions_list=self.all_positions,
+                        all_positions_list=sorted(list(set(prompt_safe_positions))),
                         all_doc_types_list=self.all_doc_types,
                         all_statuses_list=self.all_statuses,
                         dynamic_examples=dynamic_examples, # Populated
@@ -3486,6 +3799,12 @@ class AIAnalyst:
 
             # Update the session history in memory and MongoDB
             self._update_session_history(terminal_session_id, q, final_answer)
+
+            if final_answer.strip().endswith("?"):
+                self.debug("AI's answer was a question. Setting 'clarification_pending'.")
+                # We can just modify the session object in memory for the terminal
+                session["structured_context"]["clarification_pending"] = True
+                session["structured_context"]["original_ambiguous_query"] = q
 
             # --- FIX 2: Add the call to the summarizer ---
             self._summarize_conversation(terminal_session_id)
