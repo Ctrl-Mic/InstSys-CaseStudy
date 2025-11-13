@@ -110,7 +110,7 @@ class AdminAnalyst:
             return None
 
     # --- NEW METHOD TO GENERATE THE CHART ---
-    def _generate_chart_image(self, chart_data: list, query: str, filename: str):
+    def _generate_chart_image(self, chart_data: list, query: Optional[str] , filename: str):
         """
         Generates and saves a horizontal bar chart from the chart_data.
         """
@@ -150,7 +150,7 @@ class AdminAnalyst:
                 ax.text(v + (max(values) * 0.01), i, str(v), va='center', color='grey')
 
             ax.set_xlabel("Query Count")
-            ax.set_title(f'Analysis for: "{query}"', loc='left', fontsize=14)
+            # ax.set_title(f'Analysis for: "{query}"', loc='left', fontsize=14)
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             plt.tight_layout()
@@ -170,6 +170,7 @@ class AdminAnalyst:
             print(f"\n❌ ERROR: Failed to generate chart image: {e}")
             if "ImportError" in str(e):
                 print("   Hint: Did you run 'pip install matplotlib'?")
+
 
     def execute_plan(self, query: str) -> dict:
         """
@@ -274,9 +275,6 @@ class AdminAnalyst:
             pprint.pprint(chart_data)
             print("-------------------------------")
 
-            # --- MODIFIED SECTION ---
-            # Define a consistent filename to overwrite
             chart_filename = "admin_report_chart.png"
-            # Call the new chart generation method
+
             self._generate_chart_image(chart_data, q, chart_filename)
-            # --- END OF MODIFICATION ---

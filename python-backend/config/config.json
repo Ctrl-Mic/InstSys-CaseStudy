@@ -2,7 +2,7 @@
   "execution_mode": "online",
   "chat_settings": {
     "history_file": "config/chat_history.json",
-    "max_history_turns": 3
+    "max_history_turns": 10
   },
 
   "online": {

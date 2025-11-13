@@ -57,27 +57,25 @@ class LLMService:
                         "Do not include any text, explanations, or markdown formatting before or after the JSON."
                     )
         return api_url, headers, payload
+    
+    # --- REPLACE THE ENTIRE 'execute' METHOD WITH THIS ---
 
     def execute(self, *, system_prompt: str, user_prompt: str, json_mode: bool = False,
                 history: Optional[List[dict]] = None, retries: int = 2, phase: str = "planner") -> str:
         """
         Executes a request to the configured LLM API with retry logic.
-
-        Args:
-            system_prompt: The system-level instructions for the AI.
-            user_prompt: The user's query or request.
-            json_mode: If True, requests a JSON object as the response.
-            history: A list of previous conversation turns.
-            retries: The number of times to retry the request on failure.
-            phase: The current phase ('planner' or 'synth') to select the correct model.
-
-        Returns:
-            The content of the LLM's response as a string.
+        [MODIFIED] Now uses a fast 10-second timeout for 'online' mode
+        to retry quickly if the API hangs.
         """
         # Assemble messages in the correct order: system, history, then user.
         messages = [{"role": "system", "content": system_prompt}]
         if history:
-            messages.extend(history)
+            # Explicitly strip any extra keys (like 'topic_id')
+            cleaned_history = [
+                {"role": msg.get("role"), "content": msg.get("content")}
+                for msg in history
+            ]
+            messages.extend(cleaned_history)
         messages.append({"role": "user", "content": user_prompt})
 
         api_url, headers, payload = self._prepare_request(messages, json_mode, phase=phase)
@@ -87,11 +85,20 @@ class LLMService:
         if self.debug_mode:
             print(f"LLMService -> {self.api_mode.upper()} | phase={phase} | json={json_mode}")
 
+        # --- START: DYNAMIC TIMEOUT LOGIC ---
+        # Set a 10-second timeout for online API calls.
+        # Offline models can take time to load, so they get a longer timeout.
+        request_timeout = 10 if self.api_mode == 'online' else 360
+        # --- END: DYNAMIC TIMEOUT LOGIC ---
+
         last_err = None
         for attempt in range(retries + 1):
             try:
-                payload["messages"] = messages 
-                resp = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=360)
+                payload["messages"] = messages
+                
+                # --- MODIFIED: Use the dynamic 'request_timeout' variable ---
+                resp = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=request_timeout)
+                
                 resp.raise_for_status()
                 rj = resp.json()
                 if 'choices' in rj and rj['choices']:
@@ -99,11 +106,20 @@ class LLMService:
                 if 'message' in rj and 'content' in rj['message']:
                     return rj['message']['content'].strip()
                 raise ValueError("No content in LLM response")
+            
             except Exception as e:
                 last_err = e
                 if self.debug_mode:
-                    print(f"LLM attempt {attempt+1}/{retries+1} failed: {e}")
+                    # --- MODIFIED: Added a specific message for timeouts ---
+                    if isinstance(e, requests.Timeout):
+                        print(f"LLM attempt {attempt+1}/{retries+1} failed: Timeout ({request_timeout}s). Retrying...")
+                    else:
+                        print(f"LLM attempt {attempt+1}/{retries+1} failed: {e}")
+                
                 if attempt < retries:
                     time.sleep(1)
                     
         return f"Error: Could not connect to the AI service. Details: {last_err}"
+
+# --- END OF REPLACEMENT ---
+
